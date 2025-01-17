@@ -2,6 +2,10 @@
 from os import path
 from setuptools import find_packages, setup
 import urllib.request
+try:
+    import tomllib  # Included since Py 3.11
+except ImportError: # Publicly available toml library
+    import tomlkit as tomllib
 
 pkg_name = "element_calcium_imaging"
 here = path.abspath(path.dirname(__file__))
@@ -14,12 +18,11 @@ with open(path.join(here, pkg_name, "version.py")) as f:
     exec(f.read())
 
 with urllib.request.urlopen(
-    "https://raw.githubusercontent.com/flatironinstitute/CaImAn/master/requirements.txt"
+    "https://raw.githubusercontent.com/flatironinstitute/CaImAn/main/pyproject.toml"
 ) as f:
-    caiman_requirements = f.read().decode("UTF-8").split("\n")
+    py_toml = (tomllib.loads(f.read().decode("UTF-8")))
+    caiman_requirements = py_toml['project']['dependencies']
 
-caiman_requirements.remove("")
-caiman_requirements.append("future")
 
 setup(
     name=pkg_name.replace("_", "-"),
