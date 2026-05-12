@@ -550,6 +550,10 @@ class Processing(dj.Computed):
         return ProcessingTask & scan.ScanInfo
 
     def make(self, key):
+
+        print('here key ***********************************')
+        print(key)
+
         """Execute the calcium imaging analysis defined by the ProcessingTask."""
 
         task_mode, output_dir = (ProcessingTask & key).fetch1(
