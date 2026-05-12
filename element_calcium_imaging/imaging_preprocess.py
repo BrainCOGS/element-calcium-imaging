@@ -632,8 +632,6 @@ class Processing(dj.Computed):
                     for image_file in image_files
                 ]
 
-            print('image_files')
-            print(image_files)
 
             else:
                 preprocess_output_dir = (PreprocessTask & key).fetch1(
@@ -650,6 +648,10 @@ class Processing(dj.Computed):
                     )
 
                 image_files = list(preprocess_output_dir.glob("*.tif"))
+
+            print('image_files')
+            print(image_files)
+
 
             if method == "suite2p":
                 import suite2p
