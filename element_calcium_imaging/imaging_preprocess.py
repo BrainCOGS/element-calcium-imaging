@@ -654,11 +654,16 @@ class Processing(dj.Computed):
 
 
             if method == "suite2p":
+
+                print('before loading suite2p')
                 import suite2p
 
                 suite2p_params = (ProcessingTask * ProcessingParamSet & key).fetch1(
                     "params"
                 )
+
+                print('here suite2p params')
+                print(suite2p_params)
 
                 suite2p_params["save_path0"] = output_dir
                 (
@@ -675,8 +680,7 @@ class Processing(dj.Computed):
                     "tiff_list": [f.as_posix() for f in image_files],
                 }
 
-                print('here suite2p params')
-                print(suite2p_params)
+
 
                 print('suite 2p paths')
                 print(suite2p_paths)
