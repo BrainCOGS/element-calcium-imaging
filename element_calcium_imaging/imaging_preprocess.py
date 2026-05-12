@@ -683,7 +683,7 @@ class Processing(dj.Computed):
                 print(suite2p_paths)
 
                 print('suite2p version')
-                print(suite2p.__version__)
+                #print(suite2p.__version__)
 
                 suite2p.run_s2p(ops=suite2p_params, db=suite2p_paths)  # Run suite2p
 
