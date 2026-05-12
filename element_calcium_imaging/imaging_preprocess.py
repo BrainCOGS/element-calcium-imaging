@@ -634,6 +634,7 @@ class Processing(dj.Computed):
                 suite2p_params = (ProcessingTask * ProcessingParamSet & key).fetch1(
                     "params"
                 )
+
                 suite2p_params["save_path0"] = output_dir
                 (
                     suite2p_params["fs"],
@@ -648,6 +649,15 @@ class Processing(dj.Computed):
                     "data_path": [image_files[0].parent.as_posix()],
                     "tiff_list": [f.as_posix() for f in image_files],
                 }
+
+                print('here suite2p params')
+                print(suite2p_params)
+
+                print('suite 2p paths')
+                print(suite2p_paths)
+
+                print('suite2p version')
+                print(suite2p.__version__)
 
                 suite2p.run_s2p(ops=suite2p_params, db=suite2p_paths)  # Run suite2p
 
