@@ -560,6 +560,13 @@ class Processing(dj.Computed):
             "task_mode", "processing_output_dir"
         )
 
+
+        print('task_mode ***********************************')
+        print(task_mode)
+
+        print('output_dir ***********************************')
+        print(output_dir)
+
         if not output_dir:
             output_dir = ProcessingTask.infer_output_dir(key, relative=True, mkdir=True)
             # update processing_output_dir
@@ -578,6 +585,9 @@ class Processing(dj.Computed):
                 output_dir.mkdir(parents=True, exist_ok=True)
             else:
                 raise e
+            
+        print('output_dir 2 ***********************************')
+        print(output_dir)
 
         if task_mode == "load":
             method, imaging_dataset = get_loader_result(key, ProcessingTask)
@@ -603,10 +613,16 @@ class Processing(dj.Computed):
                 "processing_method"
             )
 
+            print('method')
+            print(method)
+
             preprocess_paramsets = (
                 PreprocessParamSteps.Step()
                 & dict(preprocess_param_steps_id=key["preprocess_param_steps_id"])
             ).fetch("paramset_idx")
+
+            print('preprocess_paramsets')
+            print(preprocess_paramsets)
 
             if len(preprocess_paramsets) == 0:
                 # No pre-processing steps were performed on the acquired dataset, so process the raw/acquired files.
@@ -615,6 +631,9 @@ class Processing(dj.Computed):
                     find_full_path(get_imaging_root_data_dir(), image_file)
                     for image_file in image_files
                 ]
+
+            print('image_files')
+            print(image_files)
 
             else:
                 preprocess_output_dir = (PreprocessTask & key).fetch1(
