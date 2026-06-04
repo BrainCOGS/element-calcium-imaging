@@ -437,6 +437,8 @@ class Processing(dj.Computed):
                 }
 
                 suite2p_params.update(suite2p_paths)
+                if not isinstance(suite2p_params.get("classifier_path"), str):
+                    suite2p_params["classifier_path"] = None
                 from suite2p.parameters import convert_settings_orig
                 s2p_db, s2p_settings, _ = convert_settings_orig(suite2p_params)
                 suite2p.run_s2p(db=s2p_db, settings=s2p_settings)  # Run suite2p
@@ -508,6 +510,8 @@ class Processing(dj.Computed):
                 }
 
                 params["suite2p"].update(suite2p_paths)
+                if not isinstance(params["suite2p"].get("classifier_path"), str):
+                    params["suite2p"]["classifier_path"] = None
                 from suite2p.parameters import convert_settings_orig
                 s2p_db, s2p_settings, _ = convert_settings_orig(params["suite2p"])
                 suite2p.run_s2p(db=s2p_db, settings=s2p_settings)
