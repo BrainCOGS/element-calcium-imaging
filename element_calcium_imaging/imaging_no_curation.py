@@ -437,7 +437,10 @@ class Processing(dj.Computed):
                     "tiff_list": [f.as_posix() for f in image_files],
                 }
 
-                suite2p.run_s2p(ops=suite2p_params, db=suite2p_paths)  # Run suite2p
+                suite2p_params.update(suite2p_paths)
+                from suite2p.parameters import convert_settings_orig
+                s2p_db, s2p_settings, _ = convert_settings_orig(suite2p_params)
+                suite2p.run_s2p(db=s2p_db, settings=s2p_settings)  # Run suite2p
 
                 _, imaging_dataset = get_loader_result(key, ProcessingTask)
                 suite2p_dataset = imaging_dataset
@@ -505,7 +508,10 @@ class Processing(dj.Computed):
                     "tiff_list": [f.as_posix() for f in image_files],
                 }
 
-                suite2p.run_s2p(ops=params["suite2p"], db=suite2p_paths)
+                params["suite2p"].update(suite2p_paths)
+                from suite2p.parameters import convert_settings_orig
+                s2p_db, s2p_settings, _ = convert_settings_orig(params["suite2p"])
+                suite2p.run_s2p(db=s2p_db, settings=s2p_settings)
 
                 # Convert data.bin to registered_scans.mat
                 scanfile_fullpath = pathlib.Path(output_dir) / "suite2p/plane0/data.bin"

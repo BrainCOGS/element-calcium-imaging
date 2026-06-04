@@ -59,7 +59,7 @@ setup(
         "nd2": ["nd2"],
         "sbxreader": ["sbxreader @ git+https://github.com/jcouto/sbxreader.git"],
         "scanreader": ["scanreader @ git+https://github.com/atlab/scanreader.git"],
-        "suite2p": ["suite2p[io]>=0.12.1"],
+        "suite2p": ["suite2p[io]>=1.0.0.1"],
         "tests": ["pytest", "pytest-cov", "shutils"],
     },
 )
