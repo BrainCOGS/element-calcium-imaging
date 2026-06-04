@@ -434,7 +434,7 @@ class Processing(dj.Computed):
 
                 suite2p_paths = {
                     "data_path": [image_files[0].parent.as_posix()],
-                    "tiff_list": [f.as_posix() for f in image_files],
+                    "file_list": [f.as_posix() for f in image_files],
                 }
 
                 suite2p_params.update(suite2p_paths)
@@ -505,7 +505,7 @@ class Processing(dj.Computed):
 
                 suite2p_paths = {
                     "data_path": [image_files[0].parent.as_posix()],
-                    "tiff_list": [f.as_posix() for f in image_files],
+                    "file_list": [f.as_posix() for f in image_files],
                 }
 
                 params["suite2p"].update(suite2p_paths)
