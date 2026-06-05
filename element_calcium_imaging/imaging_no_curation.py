@@ -72,6 +72,29 @@ def activate(
     imaging_report.activate(f"{imaging_schema_name}_report", imaging_schema_name)
 
 
+def _s2p_alignment_channel(ops: dict) -> int:
+    """Return 0-indexed alignment channel from suite2p ops, handling 0.x and 1.x formats."""
+    if "align_by_chan" in ops:
+        return ops["align_by_chan"] - 1
+    reg = ops.get("registration", {})
+    align_by_chan2 = reg.get("align_by_chan2", ops.get("align_by_chan2", False))
+    return 1 if align_by_chan2 else 0
+
+
+def _s2p_segmentation_channel(ops: dict) -> int:
+    """Return 0-indexed segmentation channel from suite2p ops, handling 0.x and 1.x formats."""
+    if "functional_chan" in ops:
+        return ops["functional_chan"] - 1
+    io = ops.get("io", {})
+    return io.get("functional_chan", 1) - 1
+
+
+def _s2p_normalize_params(params: dict) -> dict:
+    """Strip non-suite2p keys (e.g. suite2p_version) before passing to convert_settings_orig."""
+    _non_s2p_keys = {"suite2p_version"}
+    return {k: v for k, v in params.items() if k not in _non_s2p_keys}
+
+
 # -------------- Table declarations --------------
 
 
@@ -438,6 +461,7 @@ class Processing(dj.Computed):
                 }
 
                 suite2p_params.update(suite2p_paths)
+                suite2p_params = _s2p_normalize_params(suite2p_params)
                 if not isinstance(suite2p_params.get("classifier_path"), str):
                     suite2p_params["classifier_path"] = None
                 from suite2p.parameters import convert_settings_orig
@@ -511,6 +535,7 @@ class Processing(dj.Computed):
                 }
 
                 params["suite2p"].update(suite2p_paths)
+                params["suite2p"] = _s2p_normalize_params(params["suite2p"])
                 if not isinstance(params["suite2p"].get("classifier_path"), str):
                     params["suite2p"]["classifier_path"] = None
                 from suite2p.parameters import convert_settings_orig
@@ -694,7 +719,9 @@ class MotionCorrection(dj.Imported):
         if method in ["suite2p", "extract"]:
             suite2p_dataset = imaging_dataset
 
-            motion_correct_channel = suite2p_dataset.planes[0].alignment_channel
+            motion_correct_channel = _s2p_alignment_channel(
+                suite2p_dataset.planes[0].ops
+            )
 
             # ---- iterate through all s2p plane outputs ----
             rigid_correction, nonrigid_correction, nonrigid_blocks = {}, {}, {}
@@ -1100,7 +1127,7 @@ class Segmentation(dj.Computed):
                         {
                             **key,
                             "mask": mask_idx + mask_count,
-                            "segmentation_channel": s2p.segmentation_channel,
+                            "segmentation_channel": _s2p_segmentation_channel(s2p.ops),
                             "mask_npix": mask_stat["npix"],
                             "mask_center_x": mask_stat["med"][1],
                             "mask_center_y": mask_stat["med"][0],
