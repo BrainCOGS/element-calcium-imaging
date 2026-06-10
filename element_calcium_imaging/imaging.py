@@ -90,9 +90,44 @@ def _s2p_segmentation_channel(ops: dict) -> int:
 
 
 def _s2p_normalize_params(params: dict) -> dict:
-    """Strip non-suite2p keys (e.g. suite2p_version) before passing to convert_settings_orig."""
+    """Sanitize a stored suite2p params dict before passing to convert_settings_orig.
+
+    Strips legacy metadata keys (e.g. 'suite2p_version') and coerces numpy
+    values back to Python natives. Scalars round-tripped through DataJoint's
+    blob codec (or loaded from an ops.npy) come back as numpy types, so suite2p
+    does e.g. ``if upsample_meanImg:`` on a numpy array and raises "The truth
+    value of an ... array is ambiguous". numpy scalars / 0-d arrays -> .item(),
+    multi-element arrays -> lists, empty arrays dropped so suite2p's own default
+    applies.
+    """
     _non_s2p_keys = {"suite2p_version"}
-    return {k: v for k, v in params.items() if k not in _non_s2p_keys}
+    cleaned = {}
+    for k, v in params.items():
+        if k in _non_s2p_keys:
+            continue
+        if isinstance(v, np.generic):  # numpy scalar (np.float64, np.bool_, ...)
+            v = v.item()
+        elif isinstance(v, np.ndarray):
+            if v.size == 0:  # empty array -> let suite2p use its default
+                continue
+            v = v.item() if v.ndim == 0 else v.tolist()
+        cleaned[k] = v
+    return cleaned
+
+
+def _vstack_truncate(stacked: np.ndarray, row: np.ndarray) -> np.ndarray:
+    """vstack a per-plane shift row onto accumulated rows, truncating to the shortest length.
+
+    suite2p de-interleaves a multi-plane recording with a strided slice
+    (frame[i0::nplanes]). When the total frame count is not a multiple of
+    nplanes, the first few planes get one extra trailing frame, so per-plane
+    shift arrays (yoff/xoff) can be one element longer than the others. That
+    frame is the tail of an incomplete final volume with no counterpart in the
+    shorter planes, so it is dropped: every plane is truncated to the common
+    (minimum) length before stacking.
+    """
+    n = min(stacked.shape[-1], row.shape[-1])
+    return np.vstack([stacked[..., :n], row[..., :n]])
 
 
 # -------------- Table declarations --------------
@@ -828,20 +863,24 @@ class MotionCorrection(dj.Imported):
                         "outlier_frames": ops["badframes"],
                     }
                 else:
-                    rigid_correction["y_shifts"] = np.vstack(
-                        [rigid_correction["y_shifts"], ops["yoff"]]
+                    rigid_correction["y_shifts"] = _vstack_truncate(
+                        rigid_correction["y_shifts"], ops["yoff"]
                     )
                     rigid_correction["y_std"] = np.nanstd(
                         rigid_correction["y_shifts"].flatten()
                     )
-                    rigid_correction["x_shifts"] = np.vstack(
-                        [rigid_correction["x_shifts"], ops["xoff"]]
+                    rigid_correction["x_shifts"] = _vstack_truncate(
+                        rigid_correction["x_shifts"], ops["xoff"]
                     )
                     rigid_correction["x_std"] = np.nanstd(
                         rigid_correction["x_shifts"].flatten()
                     )
+                    n_of = min(
+                        len(rigid_correction["outlier_frames"]), len(ops["badframes"])
+                    )
                     rigid_correction["outlier_frames"] = np.logical_or(
-                        rigid_correction["outlier_frames"], ops["badframes"]
+                        rigid_correction["outlier_frames"][:n_of],
+                        ops["badframes"][:n_of],
                     )
                 # -- non-rigid motion correction --
                 if nonrigid_flag:
@@ -857,9 +896,13 @@ class MotionCorrection(dj.Imported):
                             "outlier_frames": ops["badframes"],
                         }
                     else:
+                        n_of = min(
+                            len(nonrigid_correction["outlier_frames"]),
+                            len(ops["badframes"]),
+                        )
                         nonrigid_correction["outlier_frames"] = np.logical_or(
-                            nonrigid_correction["outlier_frames"],
-                            ops["badframes"],
+                            nonrigid_correction["outlier_frames"][:n_of],
+                            ops["badframes"][:n_of],
                         )
                     for b_id, (b_y, b_x, bshift_y, bshift_x) in enumerate(
                         zip(
@@ -870,14 +913,14 @@ class MotionCorrection(dj.Imported):
                         )
                     ):
                         if b_id in nonrigid_blocks:
-                            nonrigid_blocks[b_id]["y_shifts"] = np.vstack(
-                                [nonrigid_blocks[b_id]["y_shifts"], bshift_y]
+                            nonrigid_blocks[b_id]["y_shifts"] = _vstack_truncate(
+                                nonrigid_blocks[b_id]["y_shifts"], bshift_y
                             )
                             nonrigid_blocks[b_id]["y_std"] = np.nanstd(
                                 nonrigid_blocks[b_id]["y_shifts"].flatten()
                             )
-                            nonrigid_blocks[b_id]["x_shifts"] = np.vstack(
-                                [nonrigid_blocks[b_id]["x_shifts"], bshift_x]
+                            nonrigid_blocks[b_id]["x_shifts"] = _vstack_truncate(
+                                nonrigid_blocks[b_id]["x_shifts"], bshift_x
                             )
                             nonrigid_blocks[b_id]["x_std"] = np.nanstd(
                                 nonrigid_blocks[b_id]["x_shifts"].flatten()
