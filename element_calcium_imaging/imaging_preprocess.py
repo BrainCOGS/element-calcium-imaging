@@ -99,12 +99,33 @@ def _s2p_segmentation_channel(ops: dict) -> int:
 
 
 def _s2p_normalize_params(params: dict) -> dict:
-    """Strip keys that are not valid suite2p parameters before passing to convert_settings_orig.
+    """Sanitize a stored suite2p params dict before passing to convert_settings_orig.
 
-    Handles params stored with legacy metadata fields like 'suite2p_version'.
+    Two problems are handled:
+
+    1. Legacy metadata keys (e.g. 'suite2p_version') are stripped — they are not
+       valid suite2p parameters.
+    2. Scalar parameters round-tripped through DataJoint's blob codec (or loaded
+       from an ops.npy via np.load) come back as numpy types instead of Python
+       natives. suite2p then does e.g. ``if upsample_meanImg:`` on a numpy array
+       and raises "The truth value of an ... array is ambiguous". Numpy values
+       are coerced back to plain Python: numpy scalars / 0-d arrays via .item(),
+       multi-element arrays to lists, and empty arrays are dropped so suite2p's
+       own default applies.
     """
     _non_s2p_keys = {"suite2p_version"}
-    return {k: v for k, v in params.items() if k not in _non_s2p_keys}
+    cleaned = {}
+    for k, v in params.items():
+        if k in _non_s2p_keys:
+            continue
+        if isinstance(v, np.generic):  # numpy scalar (np.float64, np.bool_, ...)
+            v = v.item()
+        elif isinstance(v, np.ndarray):
+            if v.size == 0:  # empty array -> let suite2p use its default
+                continue
+            v = v.item() if v.ndim == 0 else v.tolist()
+        cleaned[k] = v
+    return cleaned
 
 
 def _vstack_truncate(stacked: np.ndarray, row: np.ndarray) -> np.ndarray:
