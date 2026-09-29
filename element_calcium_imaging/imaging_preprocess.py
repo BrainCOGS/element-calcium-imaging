@@ -129,6 +129,20 @@ def _run_suite2p(params: dict, key: dict, image_files: list, output_dir) -> None
     suite2p_settings.verify_outputs(db, settings)
 
 
+def _s2p_package_version(suite2p_dataset) -> str:
+    """suite2p version that produced ``suite2p_dataset``, read from its first plane's ops.
+
+    suite2p 1.x stores it as ops["version"], 0.x as ops["suite2p_version"]. Returns ""
+    (the column default) when neither is present. Truncated to Processing.package_version's
+    varchar(16).
+    """
+    if not suite2p_dataset.planes:
+        return ""
+    ops = next(iter(suite2p_dataset.planes.values())).ops
+    version = ops.get("version") or ops.get("suite2p_version") or ""
+    return str(version)[:16]
+
+
 def _vstack_truncate(stacked: np.ndarray, row: np.ndarray) -> np.ndarray:
     """vstack a per-plane shift row onto accumulated rows, truncating to the shortest length.
 
@@ -631,6 +645,7 @@ class Processing(dj.Computed):
         task_mode, output_dir = (ProcessingTask & key).fetch1(
             "task_mode", "processing_output_dir"
         )
+        package_version = ""
 
 
         print('task_mode ***********************************')
@@ -671,6 +686,7 @@ class Processing(dj.Computed):
                     )
                 suite2p_dataset = imaging_dataset
                 key = {**key, "processing_time": suite2p_dataset.creation_time}
+                package_version = _s2p_package_version(suite2p_dataset)
             elif method == "caiman":
                 caiman_dataset = imaging_dataset
                 key = {**key, "processing_time": caiman_dataset.creation_time}
@@ -739,6 +755,7 @@ class Processing(dj.Computed):
                 _, imaging_dataset = get_loader_result(key, ProcessingTask)
                 suite2p_dataset = imaging_dataset
                 key = {**key, "processing_time": suite2p_dataset.creation_time}
+                package_version = _s2p_package_version(suite2p_dataset)
 
             elif method == "caiman":
                 from element_interface.caiman_loader import _process_scanimage_tiff
@@ -818,7 +835,7 @@ class Processing(dj.Computed):
         else:
             raise ValueError(f"Unknown task mode: {task_mode}")
 
-        self.insert1({**key, "package_version": ""})
+        self.insert1({**key, "package_version": package_version})
 
 
 @schema
