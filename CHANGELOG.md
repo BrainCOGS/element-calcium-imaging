@@ -3,6 +3,27 @@
 Observes [Semantic Versioning](https://semver.org/spec/v2.0.0.html) standard and
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) convention.
 
+## [0.10.2] - 2026-09-29
+
+BrainCOGS fork release: suite2p 1.1.0 support.
+
++ Add - `suite2p_settings.build_suite2p_inputs`: converts the single stored
+  `ProcessingParamSet.params` dict (flat suite2p 0.x keys and/or nested 1.x groups)
+  into suite2p 1.x `db` and `settings`, including keys `convert_settings_orig` drops or
+  mis-maps (`Neucoeff`, `nbinned`, `high_pass`, `spatial_hp_detect`, `align_by_chan`,
+  `sparse_mode`/`anatomical_only`, `batch_size`, `spatial_taper`). Unplaceable keys are
+  logged, not rejected. `torch_device` defaults to `cpu`.
++ Update - `Processing` runs suite2p through the converter with pipeline-owned input and
+  output paths, refuses to write into a folder that already holds plane output, checks
+  each plane's saved settings after the run, and records the suite2p version that
+  produced the output in `package_version`
++ Fix - `MotionCorrection` maps suite2p plane folders to fields by `field_idx` instead
+  of `field_z`
++ Fix - suite2p 1.x API and output compatibility: `align_by_chan2`,
+  `segmentation_channel`, removed `nblocks`/`xblock`/`yblock`, `classifier_path=0`,
+  numpy-typed parameters, uneven per-plane frame counts
++ Update - require `suite2p>=1.1.0`
+
 ## [0.10.1] - 2024-06-20
 
 + Fix - cleaner plotting in tutorial notebook 
