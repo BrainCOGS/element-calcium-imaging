@@ -3,9 +3,9 @@
 Observes [Semantic Versioning](https://semver.org/spec/v2.0.0.html) standard and
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) convention.
 
-## [0.10.2] - 2026-09-29
+## [0.10.2] - 2026-09-30
 
-BrainCOGS fork release: suite2p 1.1.0 support.
+BrainCOGS fork release: suite2p 1.1.0 support, `pyproject.toml` packaging, CaImAn disabled.
 
 + Add - `suite2p_settings.build_suite2p_inputs`: converts the single stored
   `ProcessingParamSet.params` dict (flat suite2p 0.x keys and/or nested 1.x groups)
@@ -23,6 +23,15 @@ BrainCOGS fork release: suite2p 1.1.0 support.
   `segmentation_channel`, removed `nblocks`/`xblock`/`yblock`, `classifier_path=0`,
   numpy-typed parameters, uneven per-plane frame counts
 + Update - require `suite2p>=1.1.0`
++ Update - packaging moved from `setup.py` to `pyproject.toml`. Building no longer
+  downloads CaImAn's `pyproject.toml` from GitHub.
++ Remove - `caiman` and `caiman_requirements` extras. The only CaImAn that
+  `element_interface.run_caiman` works with is DataJoint's fork, which does not run
+  with numpy 2 (`np.Inf`, `np.trapz`, `np.string_`), and upstream CaImAn's `fit_file`
+  no longer re-fits, evaluates or saves results.
++ Update - CaImAn task generation, triggering and loading raise `NotImplementedError`
+  (`caiman_support.caiman_unsupported`) instead of failing inside CaImAn. The legacy
+  CaImAn code is kept, unreachable, after each guard as a reference for a future port.
 
 ## [0.10.1] - 2024-06-20
 
