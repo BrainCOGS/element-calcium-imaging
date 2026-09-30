@@ -12,12 +12,18 @@ license-files = ["LICENSE"]
 authors = [{ name = "DataJoint", email = "info@datajoint.com" }]
 keywords = ["neuroscience", "calcium-imaging", "science", "datajoint"]
 dependencies = [
-    "datajoint>=0.13.0",
+    # datajoint 2 renamed dj.schema to dj.Schema (used at import in scan.py)
+    "datajoint>=0.13.0,<2",
     "ipykernel>=6.0.1",
     "ipywidgets",
     "plotly",
+    "dash",
     "dash-extensions",
+    "matplotlib",
+    "numpy",
+    "pyyaml",
     "scikit-image",
+    "scipy",
     "element-interface @ git+https://github.com/datajoint/element-interface.git",
 ]
 
@@ -31,6 +37,7 @@ elements = [
 ]
 extract = ["matlabengine", "scipy"]
 nd2 = ["nd2"]
+nwb = ["pynwb", "neuroconv"]
 sbxreader = ["sbxreader @ git+https://github.com/jcouto/sbxreader.git"]
 scanreader = ["scanreader @ git+https://github.com/atlab/scanreader.git"]
 suite2p = ["suite2p[io]>=1.1.0"]
