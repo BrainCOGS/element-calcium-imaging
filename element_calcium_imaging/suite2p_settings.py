@@ -458,28 +458,6 @@ def suite2p_save_dir(db):
     return pathlib.Path(db["save_path0"]) / db["save_folder"]
 
 
-def check_output_dir_clean(db):
-    """Refuse to run into a folder that already holds suite2p output.
-
-    suite2p 1.x re-uses existing plane folders: with 1.x output it keeps the old
-    ``db.npy`` and skips reading the inputs; with 0.x output it writes new files
-    next to the old ones. Either way the folder would mix two runs.
-    """
-    save_dir = suite2p_save_dir(db)
-    if not save_dir.exists():
-        return
-    existing = sorted(
-        p.name
-        for p in save_dir.iterdir()
-        if p.is_dir() and (p.name.startswith("plane") or p.name == "combined")
-    )
-    if existing:
-        raise FileExistsError(
-            f"{save_dir} already contains suite2p output ({', '.join(existing)}). "
-            "Delete or move this folder to re-run processing."
-        )
-
-
 def expected_plane_folders(db):
     """Plane folder names suite2p 1.x writes: ``plane{iplane * nrois + iroi}``."""
     nrois = len(db["lines"]) if db.get("lines") else 1

@@ -105,8 +105,13 @@ def _run_suite2p(params: dict, key: dict, image_files: list, output_dir) -> None
 
     The stored dict is converted by ``suite2p_settings.build_suite2p_inputs``; inputs
     and output folder come from the pipeline, planes/channels/fs from the stored dict
-    or, where it has none, from ScanInfo. The output folder must not already hold
-    suite2p output, and after the run each plane's saved settings are checked.
+    or, where it has none, from ScanInfo. After the run each plane's saved settings are
+    checked.
+
+    A rerun writes into the job's existing output folder, as the pipeline always has:
+    suite2p reuses complete plane folders (their binaries and db.npy; file list,
+    nplanes and ROI geometry are not re-read) and overwrites the results, or
+    re-converts the inputs into incomplete ones.
     """
     import suite2p
 
@@ -124,7 +129,6 @@ def _run_suite2p(params: dict, key: dict, image_files: list, output_dir) -> None
         input_format=image_files[0].suffix.lstrip(".").lower(),
         scan_info={"fs": fps, "nplanes": ndepths, "nchannels": nchannels},
     )
-    suite2p_settings.check_output_dir_clean(db)
     # run_s2p edits the dicts it is given; keep ours for the check afterwards.
     suite2p.run_s2p(db=copy.deepcopy(db), settings=copy.deepcopy(settings))
     suite2p_settings.verify_outputs(db, settings)
