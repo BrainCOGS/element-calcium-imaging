@@ -3,6 +3,18 @@
 Observes [Semantic Versioning](https://semver.org/spec/v2.0.0.html) standard and
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) convention.
 
+## [Unreleased]
+
++ Add - `suite2p_settings.run_suite2p`: runs suite2p from a stored settings dict, a file
+  list and ScanInfo values without the database, for slurm jobs whose output
+  `Processing` then ingests with `task_mode="load"`. `torch_device` overrides the stored
+  device (e.g. `"cuda"` on a GPU node).
++ Add - `suite2p_settings.check_torch_device`: runs a small FFT on the device before
+  suite2p starts, so a missing GPU or a torch build without kernels for it fails at
+  once instead of partway through a run
++ Fix - `Processing` with `task_mode="load"` accepts ScanImage multi-ROI suite2p output,
+  as `task_mode="trigger"` already did
+
 ## [0.10.3] - 2026-09-30
 
 + Fix - rerunning a suite2p job into its existing output folder works again. 0.10.2

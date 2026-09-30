@@ -1,0 +1,184 @@
+"""run_suite2p / check_torch_device: running suite2p without the database (slurm jobs)."""
+
+import copy
+
+import numpy as np
+import pytest
+
+suite2p = pytest.importorskip("suite2p")
+torch = pytest.importorskip("torch")
+
+from element_calcium_imaging import suite2p_settings  # noqa: E402
+from element_calcium_imaging.suite2p_settings import (  # noqa: E402
+    check_torch_device,
+    expected_plane_folders,
+    run_suite2p,
+)
+
+SCAN_INFO = {"fs": 30.0, "nplanes": 2, "nchannels": 1}
+
+
+@pytest.fixture
+def fake_s2p(monkeypatch):
+    """Replace suite2p.run_s2p with a stand-in that writes the output verify_outputs checks."""
+    calls = []
+
+    def run_s2p(db, settings):
+        calls.append((copy.deepcopy(db), copy.deepcopy(settings)))
+        for name in expected_plane_folders(db):
+            plane = suite2p_settings.suite2p_save_dir(db) / name
+            plane.mkdir(parents=True, exist_ok=True)
+            for f in ("ops", "iscell", "F"):
+                np.save(plane / f"{f}.npy", np.zeros(1))
+            np.save(plane / "settings.npy", settings, allow_pickle=True)
+        # suite2p edits the dicts it is given
+        db.clear()
+        settings.clear()
+
+    monkeypatch.setattr(suite2p, "run_s2p", run_s2p)
+    return calls
+
+
+def run(tmp_path, params=None, **kw):
+    kw.setdefault("image_files", [tmp_path / "raw" / "a.tif", tmp_path / "raw" / "b.tif"])
+    kw.setdefault("output_dir", tmp_path / "out")
+    kw.setdefault("scan_info", SCAN_INFO)
+    return run_suite2p({} if params is None else params, **kw)
+
+
+# ---- run_suite2p ----
+
+
+def test_runs_with_pipeline_inputs(tmp_path, fake_s2p):
+    db, settings = run(tmp_path)
+    (called_db, called_settings), = fake_s2p
+    assert called_db["file_list"] == [(tmp_path / "raw" / f).as_posix() for f in ("a.tif", "b.tif")]
+    assert called_db["data_path"] == [(tmp_path / "raw").as_posix()]
+    assert called_db["save_path0"] == (tmp_path / "out").as_posix()
+    assert called_db["input_format"] == "tif"
+    assert called_db["nplanes"] == 2 and called_settings["fs"] == 30.0
+    # returns the dicts it asked for, not the ones suite2p edited
+    assert db == called_db and settings == called_settings
+
+
+def test_accepts_str_paths(tmp_path, fake_s2p):
+    run(tmp_path, image_files=[str(tmp_path / "a.TIF")], output_dir=str(tmp_path / "out"))
+    (db, _), = fake_s2p
+    assert db["input_format"] == "tif"
+
+
+def test_no_image_files(tmp_path, fake_s2p):
+    with pytest.raises(FileNotFoundError, match="No input image files"):
+        run(tmp_path, image_files=[])
+    assert fake_s2p == []
+
+
+def test_scan_info_optional(tmp_path, fake_s2p):
+    run(tmp_path, params={"nplanes": 1, "fs": 15.0}, scan_info=None)
+    (db, settings), = fake_s2p
+    assert db["nplanes"] == 1 and settings["fs"] == 15.0
+
+
+def test_rerun_into_existing_output(tmp_path, fake_s2p):
+    """A requeued job writes into the folder its first attempt left behind."""
+    old = tmp_path / "out" / "suite2p" / "plane0"
+    old.mkdir(parents=True)
+    (old / "data.bin").write_bytes(b"old")
+    run(tmp_path)
+    assert len(fake_s2p) == 1
+    assert (old / "data.bin").read_bytes() == b"old"
+
+
+def test_params_not_mutated(tmp_path, fake_s2p):
+    params = {"nplanes": 2, "torch_device": "cpu", "registration": {"batch_size": 100}}
+    before = copy.deepcopy(params)
+    run(tmp_path, params=params, torch_device="cpu")
+    assert params == before
+
+
+def test_missing_output_raises(tmp_path, monkeypatch):
+    monkeypatch.setattr(suite2p, "run_s2p", lambda db, settings: None)
+    with pytest.raises(RuntimeError, match="plane0"):
+        run(tmp_path)
+
+
+# ---- device selection ----
+
+
+def test_device_defaults_to_stored_then_cpu(tmp_path, fake_s2p):
+    _, settings = run(tmp_path)
+    assert settings["torch_device"] == "cpu"
+
+
+def test_explicit_device_overrides_stored(tmp_path, fake_s2p, monkeypatch):
+    checked = []
+    monkeypatch.setattr(suite2p_settings, "check_torch_device", lambda d: checked.append(d))
+    _, settings = run(tmp_path, params={"torch_device": "cpu"}, torch_device="cuda")
+    assert settings["torch_device"] == "cuda"
+    assert fake_s2p[0][1]["torch_device"] == "cuda"
+    assert checked == ["cuda"]
+
+
+def test_stored_device_is_checked(tmp_path, fake_s2p, monkeypatch):
+    checked = []
+    monkeypatch.setattr(suite2p_settings, "check_torch_device", lambda d: checked.append(d))
+    run(tmp_path, params={"torch_device": "cuda"})
+    assert checked == ["cuda"]
+
+
+def test_unusable_device_fails_before_running(tmp_path, fake_s2p, monkeypatch):
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    with pytest.raises(RuntimeError, match="CUDA is not available"):
+        run(tmp_path, torch_device="cuda")
+    assert fake_s2p == []
+    assert not (tmp_path / "out" / "suite2p").exists()
+
+
+# ---- check_torch_device ----
+
+
+def test_check_cpu():
+    check_torch_device("cpu")
+
+
+@pytest.mark.parametrize("device", [None, "", 0])
+def test_check_rejects_non_device(device):
+    with pytest.raises(ValueError):
+        check_torch_device(device)
+
+
+def test_check_rejects_unknown_device_string():
+    with pytest.raises(ValueError, match="gpu0"):
+        check_torch_device("gpu0")
+
+
+@pytest.mark.parametrize("device", ["cuda", "cuda:0", "cuda:3"])
+def test_check_cuda_unavailable(monkeypatch, device):
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    with pytest.raises(RuntimeError, match="CUDA is not available"):
+        check_torch_device(device)
+
+
+def test_check_cuda_kernel_failure(monkeypatch):
+    """A GPU the installed torch has no kernels for (e.g. Pascal on a CUDA 13 build)."""
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+
+    def no_kernel(*a, **k):
+        raise RuntimeError("CUDA error: no kernel image is available for execution on the device")
+
+    monkeypatch.setattr(torch, "ones", no_kernel)
+    with pytest.raises(RuntimeError, match="cannot run on cuda.*no kernel image"):
+        check_torch_device("cuda")
+
+
+def test_check_cuda_index_out_of_range():
+    if not torch.cuda.is_available():
+        pytest.skip("no GPU")
+    with pytest.raises(RuntimeError, match="cannot run on cuda"):
+        check_torch_device(f"cuda:{torch.cuda.device_count()}")
+
+
+def test_check_cuda_real_gpu():
+    if not torch.cuda.is_available():
+        pytest.skip("no GPU")
+    check_torch_device("cuda")
