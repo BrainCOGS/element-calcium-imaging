@@ -32,8 +32,6 @@ COPY ./ /tmp/element-calcium-imaging/
 RUN \
     # pipeline dependencies
     apt-get install gcc g++ ffmpeg libsm6 libxext6 -y && \
-    # pip install --no-cache-dir -e /tmp/element-calcium-imaging[caiman_requirements] && \
-    # pip install --no-cache-dir -e /tmp/element-calcium-imaging[caiman] && \
     pip install --no-cache-dir -e /tmp/element-calcium-imaging[elements,nd2,sbxreader,scanreader,suite2p,tests] && \
     # clean up
     rm -rf /tmp/element-calcium-imaging && \

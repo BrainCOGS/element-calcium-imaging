@@ -8,6 +8,7 @@ import numpy as np
 from element_interface.utils import dict_to_uuid, find_full_path, find_root_directory
 
 from . import imaging_report, scan
+from .caiman_support import caiman_unsupported
 from .scan import (
     get_calcium_imaging_files,
     get_imaging_root_data_dir,
@@ -360,6 +361,9 @@ class ProcessingTask(dj.Manual):
 
                 suite2p_loader.Suite2p(output_dir)
             elif method == "caiman":
+                caiman_unsupported()
+                # Legacy CaImAn implementation below is unreachable; kept for a future port to
+                # upstream CaImAn (see element_calcium_imaging/caiman_support.py).
                 from element_interface import caiman_loader
 
                 caiman_loader.CaImAn(output_dir)
@@ -508,6 +512,9 @@ class Processing(dj.Computed):
                 key = {**key, "processing_time": suite2p_dataset.creation_time}
 
             elif method == "caiman":
+                caiman_unsupported()
+                # Legacy CaImAn implementation below is unreachable; kept for a future port to
+                # upstream CaImAn (see element_calcium_imaging/caiman_support.py).
                 from element_interface.caiman_loader import _process_scanimage_tiff
                 from element_interface.run_caiman import run_caiman
 
@@ -1729,6 +1736,9 @@ def get_loader_result(key: dict, table: dj.Table) -> Callable:
 
         loaded_dataset = suite2p_loader.Suite2p(output_path)
     elif method == "caiman":
+        caiman_unsupported()
+        # Legacy CaImAn implementation below is unreachable; kept for a future port to
+        # upstream CaImAn (see element_calcium_imaging/caiman_support.py).
         from element_interface import caiman_loader
 
         loaded_dataset = caiman_loader.CaImAn(output_path)

@@ -14,6 +14,10 @@ pipeline for data storage and processing with corresponding database tables that
 combined with other Elements to assemble a fully functional pipeline. This repository 
 also provides a tutorial environment and notebooks to learn the pipeline.
 
+> **BrainCOGS fork:** CaImAn processing is currently disabled; CaImAn tasks raise
+> `NotImplementedError`. See `element_calcium_imaging/caiman_support.py` for why and
+> what re-enabling it involves.
+
 ## Experiment Flowchart
 
 ![flowchart](https://raw.githubusercontent.com/datajoint/element-calcium-imaging/main/images/flowchart.svg)
