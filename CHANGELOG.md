@@ -14,6 +14,13 @@ Observes [Semantic Versioning](https://semver.org/spec/v2.0.0.html) standard and
 + Update - CaImAn task generation, triggering and loading raise `NotImplementedError`
   (`caiman_support.caiman_unsupported`) instead of failing inside CaImAn. The legacy
   CaImAn code is kept, unreachable, after each guard as a reference for a future port.
++ Fix - declare every package imported when the modules load (`dash`, `matplotlib`,
+  `numpy`, `pyyaml`, `scipy`) instead of relying on other packages to bring them in;
+  a clean install could not import the table modules (`matplotlib` missing)
++ Fix - require `datajoint<2`: datajoint 2 renamed `dj.schema` to `dj.Schema`, so
+  `scan.py` failed at import on a clean install, which resolved datajoint 2.x
++ Add - `nwb` extra (`pynwb`, `neuroconv`) for the NWB export, as the docs already
+  describe
 
 ## [0.10.1] - 2024-06-20
 
