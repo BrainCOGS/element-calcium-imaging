@@ -1,3 +1,4 @@
+import copy
 import importlib
 import inspect
 import pathlib
@@ -99,34 +100,48 @@ def _s2p_segmentation_channel(ops: dict) -> int:
     return io.get("functional_chan", 1) - 1
 
 
-def _s2p_normalize_params(params: dict) -> dict:
-    """Sanitize a stored suite2p params dict before passing to convert_settings_orig.
+def _run_suite2p(params: dict, key: dict, image_files: list, output_dir) -> None:
+    """Run suite2p 1.x on ``image_files`` with the stored settings dict ``params``.
 
-    Two problems are handled:
-
-    1. Legacy metadata keys (e.g. 'suite2p_version') are stripped — they are not
-       valid suite2p parameters.
-    2. Scalar parameters round-tripped through DataJoint's blob codec (or loaded
-       from an ops.npy via np.load) come back as numpy types instead of Python
-       natives. suite2p then does e.g. ``if upsample_meanImg:`` on a numpy array
-       and raises "The truth value of an ... array is ambiguous". Numpy values
-       are coerced back to plain Python: numpy scalars / 0-d arrays via .item(),
-       multi-element arrays to lists, and empty arrays are dropped so suite2p's
-       own default applies.
+    The stored dict is converted by ``suite2p_settings.build_suite2p_inputs``; inputs
+    and output folder come from the pipeline, planes/channels/fs from the stored dict
+    or, where it has none, from ScanInfo. The output folder must not already hold
+    suite2p output, and after the run each plane's saved settings are checked.
     """
-    _non_s2p_keys = {"suite2p_version"}
-    cleaned = {}
-    for k, v in params.items():
-        if k in _non_s2p_keys:
-            continue
-        if isinstance(v, np.generic):  # numpy scalar (np.float64, np.bool_, ...)
-            v = v.item()
-        elif isinstance(v, np.ndarray):
-            if v.size == 0:  # empty array -> let suite2p use its default
-                continue
-            v = v.item() if v.ndim == 0 else v.tolist()
-        cleaned[k] = v
-    return cleaned
+    import suite2p
+
+    from . import suite2p_settings
+
+    fps, ndepths, nchannels = (scan.ScanInfo & key).fetch1("fps", "ndepths", "nchannels")
+    image_files = [pathlib.Path(f) for f in image_files]
+    if not image_files:
+        raise FileNotFoundError(f"No input image files for suite2p processing of {key}")
+    db, settings, _ = suite2p_settings.build_suite2p_inputs(
+        params,
+        data_path=image_files[0].parent.as_posix(),
+        file_list=[f.as_posix() for f in image_files],
+        save_path0=pathlib.Path(output_dir).as_posix(),
+        input_format=image_files[0].suffix.lstrip(".").lower(),
+        scan_info={"fs": fps, "nplanes": ndepths, "nchannels": nchannels},
+    )
+    suite2p_settings.check_output_dir_clean(db)
+    # run_s2p edits the dicts it is given; keep ours for the check afterwards.
+    suite2p.run_s2p(db=copy.deepcopy(db), settings=copy.deepcopy(settings))
+    suite2p_settings.verify_outputs(db, settings)
+
+
+def _s2p_package_version(suite2p_dataset) -> str:
+    """suite2p version that produced ``suite2p_dataset``, read from its first plane's ops.
+
+    suite2p 1.x stores it as ops["version"], 0.x as ops["suite2p_version"]. Returns ""
+    (the column default) when neither is present. Truncated to Processing.package_version's
+    varchar(16).
+    """
+    if not suite2p_dataset.planes:
+        return ""
+    ops = next(iter(suite2p_dataset.planes.values())).ops
+    version = ops.get("version") or ops.get("suite2p_version") or ""
+    return str(version)[:16]
 
 
 def _vstack_truncate(stacked: np.ndarray, row: np.ndarray) -> np.ndarray:
@@ -634,6 +649,7 @@ class Processing(dj.Computed):
         task_mode, output_dir = (ProcessingTask & key).fetch1(
             "task_mode", "processing_output_dir"
         )
+        package_version = ""
 
 
         print('task_mode ***********************************')
@@ -674,6 +690,7 @@ class Processing(dj.Computed):
                     )
                 suite2p_dataset = imaging_dataset
                 key = {**key, "processing_time": suite2p_dataset.creation_time}
+                package_version = _s2p_package_version(suite2p_dataset)
             elif method == "caiman":
                 caiman_dataset = imaging_dataset
                 key = {**key, "processing_time": caiman_dataset.creation_time}
@@ -737,36 +754,12 @@ class Processing(dj.Computed):
                 print('here suite2p params')
                 print(suite2p_params)
 
-                suite2p_params["save_path0"] = output_dir
-                (
-                    suite2p_params["fs"],
-                    suite2p_params["nplanes"],
-                    suite2p_params["nchannels"],
-                ) = (scan.ScanInfo & key).fetch1("fps", "ndepths", "nchannels")
-
-                input_format = pathlib.Path(image_files[0]).suffix
-                suite2p_params["input_format"] = input_format[1:]
-
-                suite2p_paths = {
-                    "data_path": [image_files[0].parent.as_posix()],
-                    "file_list": [f.as_posix() for f in image_files],
-                }
-
-                print('suite 2p paths')
-                print(suite2p_paths)
-
-                suite2p_params.update(suite2p_paths)
-                suite2p_params = _s2p_normalize_params(suite2p_params)
-                if not isinstance(suite2p_params.get("classifier_path"), str):
-                    suite2p_params["classifier_path"] = None
-                from suite2p.parameters import convert_settings_orig
-                s2p_db, s2p_settings, _ = convert_settings_orig(suite2p_params)
-
-                suite2p.run_s2p(db=s2p_db, settings=s2p_settings)  # Run suite2p
+                _run_suite2p(suite2p_params, key, image_files, output_dir)
 
                 _, imaging_dataset = get_loader_result(key, ProcessingTask)
                 suite2p_dataset = imaging_dataset
                 key = {**key, "processing_time": suite2p_dataset.creation_time}
+                package_version = _s2p_package_version(suite2p_dataset)
 
             elif method == "caiman":
                 caiman_unsupported()
@@ -818,28 +811,7 @@ class Processing(dj.Computed):
                 # Motion Correction with Suite2p
                 params = (ProcessingTask * ProcessingParamSet & key).fetch1("params")
 
-                params["suite2p"]["save_path0"] = output_dir
-                (
-                    params["suite2p"]["fs"],
-                    params["suite2p"]["nplanes"],
-                    params["suite2p"]["nchannels"],
-                ) = (scan.ScanInfo & key).fetch1("fps", "ndepths", "nchannels")
-
-                input_format = pathlib.Path(image_files[0]).suffix
-                params["suite2p"]["input_format"] = input_format[1:]
-
-                suite2p_paths = {
-                    "data_path": [image_files[0].parent.as_posix()],
-                    "file_list": [f.as_posix() for f in image_files],
-                }
-
-                params["suite2p"].update(suite2p_paths)
-                params["suite2p"] = _s2p_normalize_params(params["suite2p"])
-                if not isinstance(params["suite2p"].get("classifier_path"), str):
-                    params["suite2p"]["classifier_path"] = None
-                from suite2p.parameters import convert_settings_orig
-                s2p_db, s2p_settings, _ = convert_settings_orig(params["suite2p"])
-                suite2p.run_s2p(db=s2p_db, settings=s2p_settings)
+                _run_suite2p(params["suite2p"], key, image_files, output_dir)
 
                 # Convert data.bin to registered_scans.mat
                 scanfile_fullpath = pathlib.Path(output_dir) / "suite2p/plane0/data.bin"
@@ -870,7 +842,7 @@ class Processing(dj.Computed):
         else:
             raise ValueError(f"Unknown task mode: {task_mode}")
 
-        self.insert1({**key, "package_version": ""})
+        self.insert1({**key, "package_version": package_version})
 
 
 @schema
@@ -1090,6 +1062,16 @@ class MotionCorrection(dj.Imported):
 
         if method in ["suite2p", "extract"]:
             suite2p_dataset = imaging_dataset
+
+            # suite2p numbers plane folders in acquisition order (plane * nrois + roi),
+            # which is field_idx order, not depth order.
+            field_keys = (scan.ScanInfo.Field & key).fetch("KEY", order_by="field_idx")
+            if max(suite2p_dataset.planes) >= len(field_keys):
+                raise ValueError(
+                    f"suite2p plane folders {list(suite2p_dataset.planes)} do not fit the "
+                    f"{len(field_keys)} ScanInfo fields of {key}; check nplanes / lines in "
+                    "the processing parameters."
+                )
 
             motion_correct_channel = _s2p_alignment_channel(
                 suite2p_dataset.planes[0].ops
