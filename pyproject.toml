@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "element-calcium-imaging"
+dynamic = ["version"]
+description = "Calcium Imaging DataJoint Element"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "DataJoint", email = "info@datajoint.com" }]
+keywords = ["neuroscience", "calcium-imaging", "science", "datajoint"]
+dependencies = [
+    "datajoint>=0.13.0",
+    "ipykernel>=6.0.1",
+    "ipywidgets",
+    "plotly",
+    "dash-extensions",
+    "scikit-image",
+    "element-interface @ git+https://github.com/datajoint/element-interface.git",
+]
+
+[project.optional-dependencies]
+# No CaImAn extras: CaImAn processing is disabled, see element_calcium_imaging/caiman_support.py
+elements = [
+    "element-animal @ git+https://github.com/datajoint/element-animal.git",
+    "element-event @ git+https://github.com/datajoint/element-event.git",
+    "element-lab @ git+https://github.com/datajoint/element-lab.git",
+    "element-session @ git+https://github.com/datajoint/element-session.git",
+]
+extract = ["matlabengine", "scipy"]
+nd2 = ["nd2"]
+sbxreader = ["sbxreader @ git+https://github.com/jcouto/sbxreader.git"]
+scanreader = ["scanreader @ git+https://github.com/atlab/scanreader.git"]
+suite2p = ["suite2p[io]>=1.1.0"]
+tests = ["pytest", "pytest-cov", "shutils"]
+
+[project.urls]
+Homepage = "https://github.com/datajoint/element-calcium-imaging"
+Repository = "https://github.com/BrainCOGS/element-calcium-imaging"
+
+[tool.setuptools.dynamic]
+version = { attr = "element_calcium_imaging.version.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["element_calcium_imaging*"]

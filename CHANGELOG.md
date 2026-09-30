@@ -3,6 +3,18 @@
 Observes [Semantic Versioning](https://semver.org/spec/v2.0.0.html) standard and
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) convention.
 
+## [Unreleased]
+
++ Update - packaging moved from `setup.py` to `pyproject.toml`. Building no longer
+  downloads CaImAn's `pyproject.toml` from GitHub.
++ Remove - `caiman` and `caiman_requirements` extras. The only CaImAn that
+  `element_interface.run_caiman` works with is DataJoint's fork, which does not run
+  with numpy 2 (`np.Inf`, `np.trapz`, `np.string_`), and upstream CaImAn's `fit_file`
+  no longer re-fits, evaluates or saves results.
++ Update - CaImAn task generation, triggering and loading raise `NotImplementedError`
+  (`caiman_support.caiman_unsupported`) instead of failing inside CaImAn. The legacy
+  CaImAn code is kept, unreachable, after each guard as a reference for a future port.
+
 ## [0.10.1] - 2024-06-20
 
 + Fix - cleaner plotting in tutorial notebook 
