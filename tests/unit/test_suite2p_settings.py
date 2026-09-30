@@ -8,7 +8,6 @@ pytest.importorskip("suite2p")
 
 from element_calcium_imaging.suite2p_settings import (  # noqa: E402
     build_suite2p_inputs,
-    check_output_dir_clean,
     expected_plane_folders,
     to_native,
     verify_outputs,
@@ -530,18 +529,6 @@ def test_expected_plane_folders_zero_planes():
 
 
 # ---- output folder guard / verification ----
-
-
-def test_output_dir_guard(tmp_path):
-    db = {"save_path0": str(tmp_path), "save_folder": "suite2p"}
-    check_output_dir_clean(db)  # missing folder
-    (tmp_path / "suite2p").mkdir()
-    check_output_dir_clean(db)  # empty folder
-    (tmp_path / "suite2p" / "run.log").write_text("")
-    check_output_dir_clean(db)  # no plane folders
-    (tmp_path / "suite2p" / "plane0").mkdir()
-    with pytest.raises(FileExistsError, match="plane0"):
-        check_output_dir_clean(db)
 
 
 def _fake_run(tmp_path, db, settings, planes):

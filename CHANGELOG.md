@@ -3,6 +3,14 @@
 Observes [Semantic Versioning](https://semver.org/spec/v2.0.0.html) standard and
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) convention.
 
+## [0.10.3] - 2026-09-30
+
++ Fix - rerunning a suite2p job into its existing output folder works again. 0.10.2
+  refused with `FileExistsError` when the folder held plane output; the pipeline once
+  more hands the folder to suite2p, which reuses complete plane folders (binaries and
+  `db.npy`) and overwrites the results, as before 0.10.2. The post-run settings check
+  is kept.
+
 ## [0.10.2] - 2026-09-30
 
 BrainCOGS fork release: suite2p 1.1.0 support, `pyproject.toml` packaging, CaImAn disabled.
