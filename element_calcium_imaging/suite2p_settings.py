@@ -33,8 +33,10 @@ stored values win, and ``ScanInfo`` only fills in what the stored dict leaves ou
 Mapping verified against suite2p 1.1.0 (see ``SUITE2P_VERSION``).
 """
 
+import contextlib
 import copy
 import difflib
+import functools
 import logging
 import pathlib
 import re
@@ -528,6 +530,38 @@ def check_torch_device(device):
         logger.info("suite2p torch_device=%s: %s", device, torch.cuda.get_device_name(dev))
 
 
+def _copy_dicts(value):
+    """Copy ``value``'s nested dicts; arrays and other values are shared, not copied."""
+    if isinstance(value, dict):
+        return {k: _copy_dicts(v) for k, v in value.items()}
+    return value
+
+
+@contextlib.contextmanager
+def _save_mat_on_copy(suite2p):
+    """While suite2p runs, hand ``suite2p.io.save_mat`` its own copy of the nested settings.
+
+    In suite2p 1.1.0, ``run_plane`` passes ``save_mat`` a shallow merge of db,
+    settings and the plane's stage timings, so each nested group (``registration``,
+    ``detection`` ...) of a stage skipped on that plane is the run's own dict.
+    ``save_mat`` replaces every None in it with ``np.array([])`` for the .mat file,
+    and later planes run with those arrays. On a rerun where plane0 is already
+    registered, plane1's registration then fails on ``upsample_meanImg``: "The truth
+    value of an empty array is ambiguous". Fall.mat is written as before.
+    """
+    save_mat = suite2p.io.save_mat
+
+    @functools.wraps(save_mat)
+    def save_mat_on_copy(ops, *args, **kwargs):
+        return save_mat(_copy_dicts(ops), *args, **kwargs)
+
+    suite2p.io.save_mat = save_mat_on_copy
+    try:
+        yield
+    finally:
+        suite2p.io.save_mat = save_mat
+
+
 def run_suite2p(params, *, image_files, output_dir, scan_info=None, torch_device=None):
     """Run suite2p 1.x on ``image_files`` with the stored settings dict ``params``.
 
@@ -570,7 +604,8 @@ def run_suite2p(params, *, image_files, output_dir, scan_info=None, torch_device
         settings["torch_device"] = torch_device
     check_torch_device(settings["torch_device"])
     # run_s2p edits the dicts it is given; keep ours for the check afterwards.
-    suite2p.run_s2p(db=copy.deepcopy(db), settings=copy.deepcopy(settings))
+    with _save_mat_on_copy(suite2p):
+        suite2p.run_s2p(db=copy.deepcopy(db), settings=copy.deepcopy(settings))
     verify_outputs(db, settings)
     return db, settings
 

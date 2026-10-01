@@ -182,3 +182,143 @@ def test_check_cuda_real_gpu():
     if not torch.cuda.is_available():
         pytest.skip("no GPU")
     check_torch_device("cuda")
+
+
+# ---- suite2p 1.1.0: io.save_mat writes into the settings of later planes ----
+#
+# run_plane passes save_mat ops = {**db, **settings, ..., **plane_times}, a shallow
+# merge, so each nested group (registration, detection, ...) is the run's own dict
+# unless plane_times has an entry of the same name, which it has only for the stages
+# that ran on that plane. save_mat replaces every None in the groups it can reach with
+# np.array([]). Job 1405 (a rerun): plane0 was already registered, so registration was
+# skipped there, and plane1 then registered with upsample_meanImg=array([]):
+# "The truth value of an empty array is ambiguous".
+
+STAGES = ("registration", "detection", "classification")
+
+# (path, the stage whose skipping exposes it to save_mat)
+NONE_DEFAULTS = [
+    (("registration", "upsample_meanImg"), "registration"),
+    (("detection", "bin_size"), "detection"),
+    (("detection", "cellpose_settings", "params"), "detection"),
+    (("detection", "cellpose_settings", "params_chan2"), "detection"),
+    (("classification", "classifier_path"), "classification"),
+]
+
+
+def _get(d, path):
+    for k in path:
+        d = d[k]
+    return d
+
+
+def _save_mat_like_run_s2p(db, settings, plane, skipped):
+    """What suite2p 1.1.0's run_plane does after a plane: save Fall.mat with real io.save_mat."""
+    plane_settings = {**suite2p.default_settings(), **settings}
+    plane_times = {stage: 1.0 for stage in STAGES if stage not in skipped}
+    ops = {**db, **plane_settings, "save_path": plane.as_posix(), **plane_times}
+    n = 3
+    suite2p.io.save_mat(ops, np.zeros(0, dtype=object), np.zeros((0, n)), np.zeros((0, n)),
+                        np.zeros((0, n)), np.zeros((0, 2)), None)
+
+
+def _fake_s2p_saving_mat(monkeypatch, skipped_on_plane0):
+    """run_s2p stand-in that saves Fall.mat after each plane and records each plane's settings.
+
+    Plane 0 skips the ``skipped_on_plane0`` stages (e.g. already registered on a rerun);
+    later planes run every stage.
+    """
+    seen = []
+
+    def run_s2p(db, settings):
+        for i, name in enumerate(expected_plane_folders(db)):
+            seen.append(copy.deepcopy(settings))
+            plane = suite2p_settings.suite2p_save_dir(db) / name
+            plane.mkdir(parents=True, exist_ok=True)
+            for f in ("ops", "iscell", "F"):
+                np.save(plane / f"{f}.npy", np.zeros(1))
+            np.save(plane / "settings.npy", settings, allow_pickle=True)
+            _save_mat_like_run_s2p(db, settings, plane, skipped_on_plane0 if i == 0 else ())
+
+    monkeypatch.setattr(suite2p, "run_s2p", run_s2p)
+    return seen
+
+
+@pytest.mark.parametrize("path,stage", NONE_DEFAULTS, ids=lambda p: ".".join(p) if isinstance(p, tuple) else None)
+def test_save_mat_does_not_change_later_planes(tmp_path, monkeypatch, path, stage):
+    seen = _fake_s2p_saving_mat(monkeypatch, skipped_on_plane0=(stage,))
+    run(tmp_path)
+    assert len(seen) == SCAN_INFO["nplanes"]
+    for settings in seen:
+        assert _get(settings, path) is None
+
+
+def test_save_mat_rerun_with_plane0_registered(tmp_path, monkeypatch):
+    """Job 1405: every stage but registration ran on plane0."""
+    seen = _fake_s2p_saving_mat(monkeypatch, skipped_on_plane0=("registration",))
+    run(tmp_path, params={"save_mat": True})
+    assert _get(seen[1], ("registration", "upsample_meanImg")) is None
+
+
+@pytest.mark.parametrize("skipped", [(), STAGES], ids=["all-ran", "none-ran"])
+def test_save_mat_still_writes_fall_mat(tmp_path, monkeypatch, skipped):
+    scipy_io = pytest.importorskip("scipy.io")
+    _fake_s2p_saving_mat(monkeypatch, skipped_on_plane0=skipped)
+    run(tmp_path)
+    for name in ("plane0", "plane1"):
+        mat = scipy_io.loadmat(tmp_path / "out" / "suite2p" / name / "Fall.mat")
+        assert {"ops", "F", "iscell"} <= set(mat)
+
+
+def test_save_mat_single_plane(tmp_path, monkeypatch):
+    seen = _fake_s2p_saving_mat(monkeypatch, skipped_on_plane0=STAGES)
+    run(tmp_path, scan_info={**SCAN_INFO, "nplanes": 1})
+    assert len(seen) == 1
+    assert _get(seen[0], ("registration", "upsample_meanImg")) is None
+
+
+def test_copy_dicts_copies_dicts_only():
+    arr = np.zeros(3)
+    ops = {"registration": {"upsample_meanImg": None, "nested": {"x": None}}, "meanImg": arr, "fs": 10.0}
+    copied = suite2p_settings._copy_dicts(ops)
+    assert copied.keys() == ops.keys() and copied["fs"] == 10.0
+    assert copied["registration"] == {"upsample_meanImg": None, "nested": {"x": None}}
+    assert copied is not ops
+    assert copied["registration"] is not ops["registration"]
+    assert copied["registration"]["nested"] is not ops["registration"]["nested"]
+    assert copied["meanImg"] is arr  # arrays are shared, not copied
+    copied["registration"]["nested"]["x"] = 1
+    assert ops["registration"]["nested"]["x"] is None
+
+
+@pytest.mark.parametrize("value", [None, 0, [], {}, np.array([])], ids=repr)
+def test_copy_dicts_non_dict_and_empty(value):
+    copied = suite2p_settings._copy_dicts(value)
+    if isinstance(value, dict):
+        assert copied == {} and copied is not value
+    else:
+        assert copied is value
+
+
+@pytest.mark.parametrize("fails", [False, True])
+def test_save_mat_restored_after_run(tmp_path, monkeypatch, fails):
+    original = suite2p.io.save_mat
+
+    def run_s2p(db, settings):
+        assert suite2p.io.save_mat is not original  # guarded while suite2p runs
+        if fails:
+            raise RuntimeError("suite2p failed")
+        for name in expected_plane_folders(db):
+            plane = suite2p_settings.suite2p_save_dir(db) / name
+            plane.mkdir(parents=True, exist_ok=True)
+            for f in ("ops", "iscell", "F"):
+                np.save(plane / f"{f}.npy", np.zeros(1))
+            np.save(plane / "settings.npy", settings, allow_pickle=True)
+
+    monkeypatch.setattr(suite2p, "run_s2p", run_s2p)
+    if fails:
+        with pytest.raises(RuntimeError, match="suite2p failed"):
+            run(tmp_path)
+    else:
+        run(tmp_path)
+    assert suite2p.io.save_mat is original

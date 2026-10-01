@@ -14,6 +14,11 @@ Observes [Semantic Versioning](https://semver.org/spec/v2.0.0.html) standard and
   once instead of partway through a run
 + Fix - `Processing` with `task_mode="load"` accepts ScanImage multi-ROI suite2p output,
   as `task_mode="trigger"` already did
++ Fix - multi-plane suite2p runs with `save_mat` no longer fail on a later plane with
+  "The truth value of an empty array is ambiguous". suite2p 1.1.0's `io.save_mat`
+  replaced None settings with empty arrays in the run's own settings for any stage
+  skipped on a plane (e.g. registration on a rerun where plane0 was already registered),
+  and the next plane ran with them. `run_suite2p` now gives `save_mat` a copy.
 
 ## [0.10.3] - 2026-09-30
 
