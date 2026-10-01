@@ -1,4 +1,3 @@
-import copy
 import importlib
 import inspect
 import pathlib
@@ -103,35 +102,20 @@ def _s2p_segmentation_channel(ops: dict) -> int:
 def _run_suite2p(params: dict, key: dict, image_files: list, output_dir) -> None:
     """Run suite2p 1.x on ``image_files`` with the stored settings dict ``params``.
 
-    The stored dict is converted by ``suite2p_settings.build_suite2p_inputs``; inputs
-    and output folder come from the pipeline, planes/channels/fs from the stored dict
-    or, where it has none, from ScanInfo. After the run each plane's saved settings are
-    checked.
-
-    A rerun writes into the job's existing output folder, as the pipeline always has:
-    suite2p reuses complete plane folders (their binaries and db.npy; file list,
-    nplanes and ROI geometry are not re-read) and overwrites the results, or
-    re-converts the inputs into incomplete ones.
+    See ``suite2p_settings.run_suite2p``; planes/channels/fs come from the stored
+    dict or, where it has none, from ScanInfo.
     """
-    import suite2p
-
     from . import suite2p_settings
 
-    fps, ndepths, nchannels = (scan.ScanInfo & key).fetch1("fps", "ndepths", "nchannels")
-    image_files = [pathlib.Path(f) for f in image_files]
     if not image_files:
         raise FileNotFoundError(f"No input image files for suite2p processing of {key}")
-    db, settings, _ = suite2p_settings.build_suite2p_inputs(
+    fps, ndepths, nchannels = (scan.ScanInfo & key).fetch1("fps", "ndepths", "nchannels")
+    suite2p_settings.run_suite2p(
         params,
-        data_path=image_files[0].parent.as_posix(),
-        file_list=[f.as_posix() for f in image_files],
-        save_path0=pathlib.Path(output_dir).as_posix(),
-        input_format=image_files[0].suffix.lstrip(".").lower(),
+        image_files=image_files,
+        output_dir=output_dir,
         scan_info={"fs": fps, "nplanes": ndepths, "nchannels": nchannels},
     )
-    # run_s2p edits the dicts it is given; keep ours for the check afterwards.
-    suite2p.run_s2p(db=copy.deepcopy(db), settings=copy.deepcopy(settings))
-    suite2p_settings.verify_outputs(db, settings)
 
 
 def _s2p_package_version(suite2p_dataset) -> str:
@@ -687,11 +671,8 @@ class Processing(dj.Computed):
         if task_mode == "load":
             method, imaging_dataset = get_loader_result(key, ProcessingTask)
             if method == "suite2p":
-                if (scan.ScanInfo & key).fetch1("nrois") > 0:
-                    raise NotImplementedError(
-                        "Suite2p ingestion error - Unable to handle"
-                        + " ScanImage multi-ROI scanning mode yet"
-                    )
+                # Same ingestion as after a triggered run (multi-ROI included), so output
+                # from run_suite2p in a slurm job loads like output computed here.
                 suite2p_dataset = imaging_dataset
                 key = {**key, "processing_time": suite2p_dataset.creation_time}
                 package_version = _s2p_package_version(suite2p_dataset)

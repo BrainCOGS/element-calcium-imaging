@@ -497,6 +497,84 @@ def verify_outputs(db, settings):
                            + "\n  ".join(problems))
 
 
+def check_torch_device(device):
+    """Fail early if torch cannot compute on ``device``.
+
+    ``torch.cuda.is_available()`` alone is not enough: it is True on a GPU the
+    installed torch has no kernels for (e.g. a Pascal card with a CUDA 13 build),
+    and suite2p would then fail partway through. A small FFT on the device catches
+    that before any work starts.
+
+    Raises:
+        ValueError: ``device`` is not a torch device string.
+        RuntimeError: the device is unavailable or cannot run torch kernels.
+    """
+    import torch
+
+    if not isinstance(device, str) or not device:
+        raise ValueError(f"torch_device must be a device string such as 'cpu' or 'cuda', got {device!r}")
+    try:
+        dev = torch.device(device)
+    except RuntimeError as e:
+        raise ValueError(f"Unknown torch_device {device!r}: {e}") from e
+    build = f"torch {torch.__version__} (CUDA {torch.version.cuda})"
+    if dev.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError(f"torch_device={device!r} requested but CUDA is not available to {build}")
+    try:
+        torch.fft.fft2(torch.ones(64, 64, device=dev)).abs().sum().item()
+    except Exception as e:
+        raise RuntimeError(f"{build} cannot run on {device}: {e}") from e
+    if dev.type == "cuda":
+        logger.info("suite2p torch_device=%s: %s", device, torch.cuda.get_device_name(dev))
+
+
+def run_suite2p(params, *, image_files, output_dir, scan_info=None, torch_device=None):
+    """Run suite2p 1.x on ``image_files`` with the stored settings dict ``params``.
+
+    Needs no database, so it also runs where the pipeline database is out of reach
+    (e.g. a slurm job); ``Processing`` then ingests the output with ``task_mode="load"``.
+    Checks the device before starting and each plane's saved settings afterwards.
+
+    A rerun writes into the existing output folder: suite2p reuses complete plane
+    folders (their binaries and db.npy; file list, nplanes and ROI geometry are not
+    re-read) and overwrites the results, or re-converts the inputs into incomplete ones.
+
+    Args:
+        params (dict): Stored settings (``ProcessingParamSet.params``). Not modified.
+        image_files (list): Input files, in order; all in one folder.
+        output_dir (str | Path): suite2p writes to ``output_dir/suite2p``.
+        scan_info (dict, optional): ``fs``, ``nplanes``, ``nchannels`` (see
+            ``build_suite2p_inputs``).
+        torch_device (str, optional): Device to compute on, e.g. ``"cuda"``. Overrides
+            the stored ``torch_device``; None keeps the stored value (default ``"cpu"``).
+
+    Returns:
+        tuple: the ``(db, settings)`` suite2p was run with.
+    """
+    import suite2p
+
+    image_files = [pathlib.Path(f) for f in image_files]
+    if not image_files:
+        raise FileNotFoundError("No input image files for suite2p processing")
+    db, settings, _ = build_suite2p_inputs(
+        params,
+        data_path=image_files[0].parent.as_posix(),
+        file_list=[f.as_posix() for f in image_files],
+        save_path0=pathlib.Path(output_dir).as_posix(),
+        input_format=image_files[0].suffix.lstrip(".").lower(),
+        scan_info=scan_info,
+    )
+    if torch_device is not None:
+        if settings["torch_device"] != torch_device:
+            logger.info("torch_device=%r replaced by %r", settings["torch_device"], torch_device)
+        settings["torch_device"] = torch_device
+    check_torch_device(settings["torch_device"])
+    # run_s2p edits the dicts it is given; keep ours for the check afterwards.
+    suite2p.run_s2p(db=copy.deepcopy(db), settings=copy.deepcopy(settings))
+    verify_outputs(db, settings)
+    return db, settings
+
+
 def _diff(want, got, where):
     if isinstance(want, dict):
         if not isinstance(got, dict):
