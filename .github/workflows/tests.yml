@@ -1,0 +1,66 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # lowest supported (requires-python) and newest released
+        python-version: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      # tests/test_pipeline.py needs a database plus the example dataset and
+      # skips itself here; the unit suite (tests/unit) is what runs.
+      - name: Run tests
+        run: uv run --locked pytest
+
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+
+      # Audits the locked tree against OSV and fails on any finding. `--locked`
+      # also asserts uv.lock is in sync with pyproject.toml.
+      #
+      # GHSA-h35f-9h28-mq5c (setuptools sdist MANIFEST.in bypass, fixed in 83;
+      # PYSEC-2026-3447 is the same advisory) is ignored on purpose: datajoint <2
+      # requires setuptools<82 because it imports pkg_resources, which setuptools
+      # 83 removed. The flaw is in building sdists; the locked setuptools only
+      # provides pkg_resources at runtime, and builds use their own setuptools.
+      # Drop the ignore with the datajoint 2 migration.
+      - name: Audit dependencies
+        run: uv audit --locked --ignore GHSA-h35f-9h28-mq5c
