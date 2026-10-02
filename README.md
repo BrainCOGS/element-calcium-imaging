@@ -52,6 +52,19 @@ documentation page.
 
 + [Documentation](https://datajoint.com/docs/elements/element-calcium-imaging)
 
+## Development
+
+The dev environment comes from `uv.lock` (suite2p and CPU-only torch included, so
+the whole unit suite runs):
+
+```bash
+uv sync                 # create .venv with the dev dependency group
+uv tool install prek    # pre-commit compatible hook runner
+prek install            # run the hooks on every commit
+prek run --all-files    # run them once over the repo
+uv run pytest           # DB integration tests skip without a database
+```
+
 ## Support
 
 + If you need help getting started or run into any errors, please open a GitHub Issue
