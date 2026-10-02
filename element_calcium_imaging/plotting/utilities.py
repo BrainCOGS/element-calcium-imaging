@@ -1,10 +1,10 @@
 import pathlib
+
 import datajoint as dj
 import numpy as np
+from element_interface.utils import find_full_path
 from scipy import ndimage
 from skimage import draw, measure
-from element_interface.utils import find_full_path
-
 
 logger = dj.logger
 

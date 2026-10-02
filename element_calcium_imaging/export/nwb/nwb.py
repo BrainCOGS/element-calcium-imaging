@@ -1,5 +1,5 @@
-import numpy as np
 import datajoint as dj
+import numpy as np
 from datajoint import DataJointError
 from pynwb import NWBHDF5IO, NWBFile
 from pynwb.ophys import (
@@ -10,9 +10,8 @@ from pynwb.ophys import (
     TwoPhotonSeries,
 )
 
-from ... import scan, imaging_no_curation
-from ...scan import get_calcium_imaging_files, get_imaging_root_data_dir
-
+from ... import imaging_no_curation, scan
+from ...scan import get_calcium_imaging_files
 
 logger = dj.logger
 
@@ -181,8 +180,8 @@ def _add_scan_to_nwb(session_key, nwbfile):
 
     for channel in range(no_channels):
         optical_channel = OpticalChannel(
-            name=f"OpticalChannel{channel+1}",
-            description=f"Optical channel number {channel+1}",
+            name=f"OpticalChannel{channel + 1}",
+            description=f"Optical channel number {channel + 1}",
             emission_lambda=nan,
         )
 
@@ -195,7 +194,7 @@ def _add_scan_to_nwb(session_key, nwbfile):
                 description=(
                     scan_notes
                     if scan_notes != ""
-                    else f"Imaging plane for field {field_no+1}, channel {channel+1}"
+                    else f"Imaging plane for field {field_no + 1}, channel {channel + 1}"
                 ),
                 device=device,
                 excitation_lambda=nan,

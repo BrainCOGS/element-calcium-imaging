@@ -54,7 +54,10 @@ _RENAMED = {
     "Neucoeff": (("extraction", "neuropil_coefficient"), None),
     "nbinned": (("detection", "nbins"), None),
     "high_pass": (("detection", "highpass_time"), None),
-    "spatial_hp_detect": (("detection", "sparsery_settings", "highpass_neuropil"), None),
+    "spatial_hp_detect": (
+        ("detection", "sparsery_settings", "highpass_neuropil"),
+        None,
+    ),
     # 0.x: 1-based channel number; 1.x: bool "use channel 2"
     "align_by_chan": (("registration", "align_by_chan2"), lambda v: int(v) == 2),
 }
@@ -91,11 +94,25 @@ _DROPPED = {
 
 # Keys suite2p 1.x writes into a saved db.npy; present when a used db is stored back.
 _DB_OUTPUTS = (
-    "first_files", "Lx", "Ly", "db_path", "frames_per_file", "frames_per_folder", "iplane",
-    "iroi", "meanImg", "nframes", "reg_file", "raw_file", "reg_file_chan2", "raw_file_chan2",
-    "save_path", "settings_path", "ops_path",
+    "first_files",
+    "Lx",
+    "Ly",
+    "db_path",
+    "frames_per_file",
+    "frames_per_folder",
+    "iplane",
+    "iroi",
+    "meanImg",
+    "nframes",
+    "reg_file",
+    "raw_file",
+    "reg_file_chan2",
+    "raw_file_chan2",
+    "save_path",
+    "settings_path",
+    "ops_path",
 )
-_DROPPED.update({k: "written by suite2p, not an input" for k in _DB_OUTPUTS})
+_DROPPED.update(dict.fromkeys(_DB_OUTPUTS, "written by suite2p, not an input"))
 
 # db keys where 0.x used [] (or "") for "unset" and 1.x uses None.
 _EMPTY_TO_NONE = ("fast_disk", "subfolders", "ignore_flyback", "lines", "dy", "dx")
@@ -175,7 +192,11 @@ def _validate(values, spec, where, warnings):
             ok = isinstance(v, typ)
         if not ok:
             warnings.append(f"{where}[{k!r}] = {v!r}: suite2p expects {typ.__name__}")
-        elif s["min"] is not None and typ in (int, float) and not s["min"] <= v <= s["max"]:
+        elif (
+            s["min"] is not None
+            and typ in (int, float)
+            and not s["min"] <= v <= s["max"]
+        ):
             warnings.append(f"{where}[{k!r}] = {v!r}: outside [{s['min']}, {s['max']}]")
 
 
@@ -252,7 +273,11 @@ def build_suite2p_inputs(
     db, settings, left = convert_settings_orig(
         copy.deepcopy(flat), db=default_db(), settings=default_settings()
     )
-    reg, det, ext = settings["registration"], settings["detection"], settings["extraction"]
+    reg, det, ext = (
+        settings["registration"],
+        settings["detection"],
+        settings["extraction"],
+    )
 
     for old, (path, fn) in _RENAMED.items():
         if old in left:
@@ -287,7 +312,9 @@ def build_suite2p_inputs(
     # 0.x used spatial_taper only with 1Preg=True; otherwise it
     # tapered by 3 * smooth_sigma. 1.x always uses spatial_taper.
     if flat.get("1Preg"):
-        warn("1Preg=True: 1P registration was removed in 1.x; spatial_taper kept as given")
+        warn(
+            "1Preg=True: 1P registration was removed in 1.x; spatial_taper kept as given"
+        )
     elif "spatial_taper" in flat or "smooth_sigma" in flat:
         taper = round(3 * float(reg["smooth_sigma"]), 6)
         if "spatial_taper" in flat and flat["spatial_taper"] != taper:
@@ -307,9 +334,15 @@ def build_suite2p_inputs(
     for k in list(left):
         value = left.pop(k)
         if k not in _DROPPED:
-            warn(f"dropped unknown suite2p setting {k}={_short(value)}"
-                 f"{_suggest(k, _known_flat_keys(DB, SETTINGS))}")
-        elif k not in _DB_OUTPUTS and not _is_empty(value) and value not in (False, 0, -1):
+            warn(
+                f"dropped unknown suite2p setting {k}={_short(value)}"
+                f"{_suggest(k, _known_flat_keys(DB, SETTINGS))}"
+            )
+        elif (
+            k not in _DB_OUTPUTS
+            and not _is_empty(value)
+            and value not in (False, 0, -1)
+        ):
             warn(f"dropped {k}={_short(value)}: {_DROPPED[k]}")
 
     # Nested 1.x groups are applied last and win over top-level keys.
@@ -317,8 +350,10 @@ def build_suite2p_inputs(
     for path, value in _leaves(nested):
         for key, fpath in flat_paths:
             if fpath == path and _diff(value, _get_path(settings, path), ""):
-                warn(f"{'.'.join(path)}: top-level {key}={flat[key]!r} and nested "
-                     f"{value!r} disagree; using the nested value")
+                warn(
+                    f"{'.'.join(path)}: top-level {key}={flat[key]!r} and nested "
+                    f"{value!r} disagree; using the nested value"
+                )
     _deep_update(settings, nested, SETTINGS, "settings", warn)
     if nested:
         note(f"applied nested settings groups: {sorted(nested)}")
@@ -388,7 +423,9 @@ def _normalize_keys(params, warn):
             value = _normalize_keys(value, warn)
         clean = _ALIASES.get(clean, clean)
         if clean in out and _diff(out[clean], value, ""):
-            warn(f"{clean!r} given more than once ({out[clean]!r}, {value!r}); using {value!r}")
+            warn(
+                f"{clean!r} given more than once ({out[clean]!r}, {value!r}); using {value!r}"
+            )
         if clean != key:
             warn(f"key {key!r} read as {clean!r}")
         out[clean] = value
@@ -429,7 +466,10 @@ def _flat_target_paths(flat, db_spec, settings_spec):
         elif key == "spikedetect":
             pairs.append((key, ("run", "do_deconvolution")))
         elif key == "batch_size":  # copied into registration and extraction
-            pairs += [(key, ("registration", "batch_size")), (key, ("extraction", "batch_size"))]
+            pairs += [
+                (key, ("registration", "batch_size")),
+                (key, ("extraction", "batch_size")),
+            ]
         elif key not in db_spec and key in first:
             pairs.append((key, first[key]))
     return pairs
@@ -440,7 +480,12 @@ def _spec_tree(spec):
 
 
 def _known_flat_keys(db_spec, settings_spec):
-    keys = set(db_spec) | set(_RENAMED) | set(_DROPPED) | {"sparse_mode", "anatomical_only"}
+    keys = (
+        set(db_spec)
+        | set(_RENAMED)
+        | set(_DROPPED)
+        | {"sparse_mode", "anatomical_only"}
+    )
     keys |= {"roidetect", "spikedetect"}
 
     def walk(spec):
@@ -485,16 +530,21 @@ def verify_outputs(db, settings):
     intended = to_native(settings)
     for name in expected_plane_folders(db):
         plane = save_dir / name
-        missing = [f for f in ("ops.npy", "iscell.npy", "F.npy", "settings.npy")
-                   if not (plane / f).exists()]
+        missing = [
+            f
+            for f in ("ops.npy", "iscell.npy", "F.npy", "settings.npy")
+            if not (plane / f).exists()
+        ]
         if missing:
             problems.append(f"{plane}: missing {', '.join(missing)}")
             continue
         used = to_native(np.load(plane / "settings.npy", allow_pickle=True).item())
         problems += [f"{name}: {d}" for d in _diff(intended, used, "settings")]
     if problems:
-        raise RuntimeError("suite2p output does not match the requested run:\n  "
-                           + "\n  ".join(problems))
+        raise RuntimeError(
+            "suite2p output does not match the requested run:\n  "
+            + "\n  ".join(problems)
+        )
 
 
 def check_torch_device(device):
@@ -512,20 +562,26 @@ def check_torch_device(device):
     import torch
 
     if not isinstance(device, str) or not device:
-        raise ValueError(f"torch_device must be a device string such as 'cpu' or 'cuda', got {device!r}")
+        raise ValueError(
+            f"torch_device must be a device string such as 'cpu' or 'cuda', got {device!r}"
+        )
     try:
         dev = torch.device(device)
     except RuntimeError as e:
         raise ValueError(f"Unknown torch_device {device!r}: {e}") from e
     build = f"torch {torch.__version__} (CUDA {torch.version.cuda})"
     if dev.type == "cuda" and not torch.cuda.is_available():
-        raise RuntimeError(f"torch_device={device!r} requested but CUDA is not available to {build}")
+        raise RuntimeError(
+            f"torch_device={device!r} requested but CUDA is not available to {build}"
+        )
     try:
         torch.fft.fft2(torch.ones(64, 64, device=dev)).abs().sum().item()
     except Exception as e:
         raise RuntimeError(f"{build} cannot run on {device}: {e}") from e
     if dev.type == "cuda":
-        logger.info("suite2p torch_device=%s: %s", device, torch.cuda.get_device_name(dev))
+        logger.info(
+            "suite2p torch_device=%s: %s", device, torch.cuda.get_device_name(dev)
+        )
 
 
 def run_suite2p(params, *, image_files, output_dir, scan_info=None, torch_device=None):
@@ -566,7 +622,9 @@ def run_suite2p(params, *, image_files, output_dir, scan_info=None, torch_device
     )
     if torch_device is not None:
         if settings["torch_device"] != torch_device:
-            logger.info("torch_device=%r replaced by %r", settings["torch_device"], torch_device)
+            logger.info(
+                "torch_device=%r replaced by %r", settings["torch_device"], torch_device
+            )
         settings["torch_device"] = torch_device
     check_torch_device(settings["torch_device"])
     # run_s2p edits the dicts it is given; keep ours for the check afterwards.
@@ -581,7 +639,9 @@ def _diff(want, got, where):
             return [f"{where}: expected a dict, got {got!r}"]
         return [d for k in want for d in _diff(want[k], got.get(k), f"{where}[{k!r}]")]
     if isinstance(want, (list, tuple)) and isinstance(got, (list, tuple)):
-        if len(want) == len(got) and all(not _diff(a, b, "") for a, b in zip(want, got)):
+        if len(want) == len(got) and all(
+            not _diff(a, b, "") for a, b in zip(want, got)
+        ):
             return []
     elif isinstance(want, float) or isinstance(got, float):
         if want is not None and got is not None and np.isclose(want, got):

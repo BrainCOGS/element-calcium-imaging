@@ -29,7 +29,10 @@ def test_s2p_package_version(ops, expected):
 
 
 def test_s2p_package_version_uses_first_plane():
-    assert _s2p_package_version(dataset({"version": "1.1.0"}, {"version": "9.9.9"})) == "1.1.0"
+    assert (
+        _s2p_package_version(dataset({"version": "1.1.0"}, {"version": "9.9.9"}))
+        == "1.1.0"
+    )
 
 
 def test_s2p_package_version_no_planes():

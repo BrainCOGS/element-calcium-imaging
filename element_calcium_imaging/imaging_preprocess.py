@@ -51,9 +51,9 @@ def activate(
 
     if isinstance(linking_module, str):
         linking_module = importlib.import_module(linking_module)
-    assert inspect.ismodule(
-        linking_module
-    ), "The argument 'dependency' must be a module's name or a module"
+    assert inspect.ismodule(linking_module), (
+        "The argument 'dependency' must be a module's name or a module"
+    )
 
     global _linking_module
     _linking_module = linking_module
@@ -109,7 +109,9 @@ def _run_suite2p(params: dict, key: dict, image_files: list, output_dir) -> None
 
     if not image_files:
         raise FileNotFoundError(f"No input image files for suite2p processing of {key}")
-    fps, ndepths, nchannels = (scan.ScanInfo & key).fetch1("fps", "ndepths", "nchannels")
+    fps, ndepths, nchannels = (scan.ScanInfo & key).fetch1(
+        "fps", "ndepths", "nchannels"
+    )
     suite2p_settings.run_suite2p(
         params,
         image_files=image_files,
@@ -225,7 +227,7 @@ class PreprocessParamSet(dj.Lookup):
                 return
             else:  # If not same name: human error, trying to add the same paramset with different name
                 raise dj.DataJointError(
-                    "The specified param-set already exists - name: {}".format(p_name)
+                    f"The specified param-set already exists - name: {p_name}"
                 )
         else:
             cls.insert1(param_dict)
@@ -436,7 +438,7 @@ class ProcessingParamSet(dj.Lookup):
                 return
             else:  # If not same name: human error, trying to add the same paramset with different name
                 raise dj.DataJointError(
-                    "The specified param-set already exists - name: {}".format(p_name)
+                    f"The specified param-set already exists - name: {p_name}"
                 )
         else:
             cls.insert1(param_dict)
@@ -533,7 +535,7 @@ class ProcessingTask(dj.Manual):
         output_dir = (
             processed_dir
             / scan_dir.relative_to(root_dir)
-            / f'{method}_{key["paramset_idx"]}'
+            / f"{method}_{key['paramset_idx']}"
         )
 
         if mkdir:
@@ -579,9 +581,7 @@ class ProcessingTask(dj.Manual):
                 extract_loader.EXTRACT(output_dir)
 
             else:
-                raise NotImplementedError(
-                    "Unknown/unimplemented method: {}".format(method)
-                )
+                raise NotImplementedError(f"Unknown/unimplemented method: {method}")
         except FileNotFoundError:
             task_mode = "trigger"
         else:
@@ -629,7 +629,7 @@ class Processing(dj.Computed):
 
     def make(self, key):
 
-        print('here key ***********************************')
+        print("here key ***********************************")
         print(key)
 
         """Execute the calcium imaging analysis defined by the ProcessingTask."""
@@ -639,11 +639,10 @@ class Processing(dj.Computed):
         )
         package_version = ""
 
-
-        print('task_mode ***********************************')
+        print("task_mode ***********************************")
         print(task_mode)
 
-        print('output_dir ***********************************')
+        print("output_dir ***********************************")
         print(output_dir)
 
         if not output_dir:
@@ -664,8 +663,8 @@ class Processing(dj.Computed):
                 output_dir.mkdir(parents=True, exist_ok=True)
             else:
                 raise e
-            
-        print('output_dir 2 ***********************************')
+
+        print("output_dir 2 ***********************************")
         print(output_dir)
 
         if task_mode == "load":
@@ -684,13 +683,13 @@ class Processing(dj.Computed):
                     "To use EXTRACT with this DataJoint Element please set `task_mode=trigger`"
                 )
             else:
-                raise NotImplementedError("Unknown method: {}".format(method))
+                raise NotImplementedError(f"Unknown method: {method}")
         elif task_mode == "trigger":
             method = (ProcessingParamSet * ProcessingTask & key).fetch1(
                 "processing_method"
             )
 
-            print('method')
+            print("method")
             print(method)
 
             preprocess_paramsets = (
@@ -698,7 +697,7 @@ class Processing(dj.Computed):
                 & dict(preprocess_param_steps_id=key["preprocess_param_steps_id"])
             ).fetch("paramset_idx")
 
-            print('preprocess_paramsets')
+            print("preprocess_paramsets")
             print(preprocess_paramsets)
 
             if len(preprocess_paramsets) == 0:
@@ -708,7 +707,6 @@ class Processing(dj.Computed):
                     find_full_path(get_imaging_root_data_dir(), image_file)
                     for image_file in image_files
                 ]
-
 
             else:
                 preprocess_output_dir = (PreprocessTask & key).fetch1(
@@ -726,17 +724,15 @@ class Processing(dj.Computed):
 
                 image_files = list(preprocess_output_dir.glob("*.tif"))
 
-
             if method == "suite2p":
-
-                print('before loading suite2p')
-                import suite2p
+                print("before loading suite2p")
+                import suite2p  # fail early if suite2p is missing
 
                 suite2p_params = (ProcessingTask * ProcessingParamSet & key).fetch1(
                     "params"
                 )
 
-                print('here suite2p params')
+                print("here suite2p params")
                 print(suite2p_params)
 
                 _run_suite2p(suite2p_params, key, image_files, output_dir)
@@ -789,7 +785,7 @@ class Processing(dj.Computed):
                 key["processing_time"] = caiman_dataset.creation_time
 
             elif method == "extract":
-                import suite2p
+                import suite2p  # noqa: F401  (fail early if suite2p is missing)
                 from element_interface.extract_trigger import EXTRACT_trigger
                 from scipy.io import savemat
 
@@ -885,7 +881,7 @@ class Curation(dj.Manual):
             extract_dataset = imaging_dataset
             curation_time = extract_dataset.creation_time
         else:
-            raise NotImplementedError("Unknown method: {}".format(method))
+            raise NotImplementedError(f"Unknown method: {method}")
 
         # Synthesize curation_id
         curation_id = (
@@ -1070,7 +1066,9 @@ class MotionCorrection(dj.Imported):
                 # suite2p 1.x stores registration settings nested; 0.x stored them flat
                 reg_settings = ops.get("registration", {})
                 nonrigid_flag = reg_settings.get("nonrigid", ops.get("nonrigid", False))
-                block_size = reg_settings.get("block_size", ops.get("block_size", (128, 128)))
+                block_size = reg_settings.get(
+                    "block_size", ops.get("block_size", (128, 128))
+                )
                 # nblocks/xblock/yblock were removed from ops.npy in suite2p 1.x; reconstruct
                 if "nblocks" in ops:
                     nblocks = ops["nblocks"]
@@ -1078,6 +1076,7 @@ class MotionCorrection(dj.Imported):
                     yblock = ops["yblock"]
                 else:
                     from suite2p.registration.nonrigid import make_blocks
+
                     yblock, xblock, nblocks, *_ = make_blocks(
                         ops["Ly"], ops["Lx"], block_size=block_size
                     )
@@ -1404,7 +1403,7 @@ class MotionCorrection(dj.Imported):
             ]
             self.Summary.insert(summary_images)
         else:
-            raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+            raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
 
 # -------------- Segmentation --------------
@@ -1757,7 +1756,7 @@ class Fluorescence(dj.Computed):
             self.Trace.insert(fluo_traces)
 
         else:
-            raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+            raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
 
 @schema
@@ -1878,7 +1877,7 @@ class Activity(dj.Computed):
                     for mask in caiman_dataset.masks
                 )
         else:
-            raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+            raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
 
 @schema
@@ -2044,6 +2043,6 @@ def get_loader_result(key: dict, table: dj.Table) -> Callable:
 
         loaded_dataset = extract_loader.EXTRACT(output_path)
     else:
-        raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+        raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
     return method, loaded_dataset
