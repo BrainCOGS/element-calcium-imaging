@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("suite2p")
 
-from element_calcium_imaging.suite2p_settings import (  # noqa: E402
+from element_calcium_imaging.suite2p_settings import (
     build_suite2p_inputs,
     expected_plane_folders,
     to_native,
@@ -547,7 +547,7 @@ def test_torch_device_default_overridable():
 
 
 ROIS = {
-    "lines": [list(range(0, 128)), list(range(144, 272))],
+    "lines": [list(range(128)), list(range(144, 272))],
     "dy": [0, 0],
     "dx": [0, 128],
 }

@@ -13,7 +13,7 @@ import pytest
 
 pytest.importorskip("suite2p")
 
-from element_calcium_imaging import imaging_preprocess  # noqa: E402
+from element_calcium_imaging import imaging_preprocess
 
 KEY = {"recording_id": 1, "tiff_split": 0}
 

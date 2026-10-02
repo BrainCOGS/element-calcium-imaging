@@ -25,7 +25,6 @@ def dj_config():
         }
     )
     os.environ["DATABASE_PREFIX"] = "test_"
-    return
 
 
 @pytest.fixture(autouse=True, scope="session")

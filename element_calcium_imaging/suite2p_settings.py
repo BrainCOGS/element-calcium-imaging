@@ -112,7 +112,7 @@ _DB_OUTPUTS = (
     "settings_path",
     "ops_path",
 )
-_DROPPED.update({k: "written by suite2p, not an input" for k in _DB_OUTPUTS})
+_DROPPED.update(dict.fromkeys(_DB_OUTPUTS, "written by suite2p, not an input"))
 
 # db keys where 0.x used [] (or "") for "unset" and 1.x uses None.
 _EMPTY_TO_NONE = ("fast_disk", "subfolders", "ignore_flyback", "lines", "dy", "dx")
