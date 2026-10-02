@@ -189,7 +189,7 @@ def main(imaging: ModuleType, usedb: bool = False) -> wg:
         [
             wg.HBox(
                 [motioncorrection_dropdown, load_button],
-                layout=wg.Layout(width=f"{FIG1_WIDTH+FIG2_WIDTH}px"),
+                layout=wg.Layout(width=f"{FIG1_WIDTH + FIG2_WIDTH}px"),
             ),
             wg.HBox([fig1_widget, fig2_widget]),
         ]

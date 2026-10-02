@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("suite2p")
 
-from element_calcium_imaging.suite2p_settings import (  # noqa: E402
+from element_calcium_imaging.suite2p_settings import (
     build_suite2p_inputs,
     expected_plane_folders,
     to_native,
@@ -56,7 +56,9 @@ def test_legacy_config_converts(legacy):
 
 # Paramsets stored in the lab database (0.10.1 flat, one 1.x nested, one with
 # whitespace in its keys).
-STORED = json.loads((pathlib.Path(__file__).parent / "data" / "stored_paramsets.json").read_text())
+STORED = json.loads(
+    (pathlib.Path(__file__).parent / "data" / "stored_paramsets.json").read_text()
+)
 
 
 @pytest.mark.parametrize("idx", [2, 3, 4, 6, 7])
@@ -143,7 +145,11 @@ def test_align_by_chan(chan, expected):
         ({"sparse_mode": 0}, "sourcery", None),
         ({"anatomical_only": 0}, "sparsery", None),  # 0.x default sparse_mode=True
         ({"anatomical_only": None, "sparse_mode": False}, "sourcery", None),
-        ({"anatomical_only": 1, "sparse_mode": False}, "cellpose", "max_proj / meanImg"),
+        (
+            {"anatomical_only": 1, "sparse_mode": False},
+            "cellpose",
+            "max_proj / meanImg",
+        ),
         ({"anatomical_only": 2}, "cellpose", "meanImg"),
         ({"anatomical_only": 4}, "cellpose", "max_proj"),
         ({}, "sparsery", None),
@@ -179,7 +185,12 @@ def test_spatial_taper_uses_0x_effective_value(params, taper):
 
 def test_batch_size_copied_everywhere():
     db, s, _ = build({"batch_size": 250})
-    assert db["batch_size"] == s["registration"]["batch_size"] == s["extraction"]["batch_size"] == 250
+    assert (
+        db["batch_size"]
+        == s["registration"]["batch_size"]
+        == s["extraction"]["batch_size"]
+        == 250
+    )
 
 
 def test_batch_size_absent_keeps_1x_defaults():
@@ -198,18 +209,23 @@ def test_classifier_path_kept():
     assert s["classification"]["classifier_path"] == "/x/classifier.npy"
 
 
-@pytest.mark.parametrize("diameter, expected", [(12, [12.0, 12.0]), ([10, 14], [10, 14]),
-                                                (np.float64(8), [8.0, 8.0])])
+@pytest.mark.parametrize(
+    "diameter, expected",
+    [(12, [12.0, 12.0]), ([10, 14], [10, 14]), (np.float64(8), [8.0, 8.0])],
+)
 def test_diameter(diameter, expected):
     _, s, _ = build({"diameter": diameter})
     assert s["diameter"] == expected
 
 
-@pytest.mark.parametrize("params", [
-    {"anatomical_only": 1, "diameter": 0},
-    {"sparse_mode": True, "diameter": 0},
-    {"sparse_mode": False, "diameter": 0},  # values are not policed here
-])
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"anatomical_only": 1, "diameter": 0},
+        {"sparse_mode": True, "diameter": 0},
+        {"sparse_mode": False, "diameter": 0},  # values are not policed here
+    ],
+)
 def test_zero_diameter_passed_through(params):
     _, s, _ = build(params)
     assert s["diameter"] == [0.0, 0.0]
@@ -226,7 +242,9 @@ def test_float_block_size_coerced_to_int(group):
 
 
 def test_whitespace_in_keys_removed():
-    db, s, notes = build({" nplanes": 3, " do_ bidiphase": True, "registration": {" nonrigid": False}})
+    db, s, notes = build(
+        {" nplanes": 3, " do_ bidiphase": True, "registration": {" nonrigid": False}}
+    )
     assert db["nplanes"] == 3
     assert s["registration"]["do_bidiphase"] is True
     assert s["registration"]["nonrigid"] is False
@@ -262,7 +280,9 @@ def test_bruker_flag_sets_input_format():
 
 
 def test_nested_group_is_deep_merged():
-    _, s, _ = build({"nonrigid": False, "registration": {"batch_size": 64, "spatial_taper": 10}})
+    _, s, _ = build(
+        {"nonrigid": False, "registration": {"batch_size": 64, "spatial_taper": 10}}
+    )
     reg = s["registration"]
     assert reg["batch_size"] == 64
     assert reg["spatial_taper"] == 10
@@ -270,28 +290,51 @@ def test_nested_group_is_deep_merged():
     assert reg["maxregshift"] == 0.1  # rest of the group keeps defaults
 
 
-@pytest.mark.parametrize("params, path, value", [
-    ({"neuropil_extract": False, "extraction": {"neuropil_extract": True}},
-     ("extraction", "neuropil_extract"), True),
-    ({"batch_size": 500, "registration": {"batch_size": 64}}, ("registration", "batch_size"), 64),
-    ({"Neucoeff": 0.5, "extraction": {"neuropil_coefficient": 0.7}},
-     ("extraction", "neuropil_coefficient"), 0.7),
-    ({"sparse_mode": False, "detection": {"algorithm": "sparsery"}},
-     ("detection", "algorithm"), "sparsery"),
-    ({"roidetect": False, "run": {"do_detection": True}}, ("run", "do_detection"), True),
-])
+@pytest.mark.parametrize(
+    "params, path, value",
+    [
+        (
+            {"neuropil_extract": False, "extraction": {"neuropil_extract": True}},
+            ("extraction", "neuropil_extract"),
+            True,
+        ),
+        (
+            {"batch_size": 500, "registration": {"batch_size": 64}},
+            ("registration", "batch_size"),
+            64,
+        ),
+        (
+            {"Neucoeff": 0.5, "extraction": {"neuropil_coefficient": 0.7}},
+            ("extraction", "neuropil_coefficient"),
+            0.7,
+        ),
+        (
+            {"sparse_mode": False, "detection": {"algorithm": "sparsery"}},
+            ("detection", "algorithm"),
+            "sparsery",
+        ),
+        (
+            {"roidetect": False, "run": {"do_detection": True}},
+            ("run", "do_detection"),
+            True,
+        ),
+    ],
+)
 def test_flat_and_nested_conflict_nested_wins(params, path, value):
     _, s, notes = build(params)
     assert s[path[0]][path[1]] == value
     assert any("disagree" in n for n in notes)
 
 
-@pytest.mark.parametrize("params", [
-    {"neuropil_extract": False, "extraction": {"neuropil_extract": False}},
-    {"batch_size": 64, "registration": {"batch_size": 64}},
-    {"sparse_mode": False, "detection": {"algorithm": "sourcery"}},
-    {"block_size": [64, 64], "registration": {"block_size": [64.0, 64.0]}},
-])
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"neuropil_extract": False, "extraction": {"neuropil_extract": False}},
+        {"batch_size": 64, "registration": {"batch_size": 64}},
+        {"sparse_mode": False, "detection": {"algorithm": "sourcery"}},
+        {"block_size": [64, 64], "registration": {"block_size": [64.0, 64.0]}},
+    ],
+)
 def test_flat_and_nested_agreeing_ok(params):
     _, _, notes = build(params)
     assert not any("disagree" in n for n in notes)
@@ -320,12 +363,16 @@ def test_nested_group_not_a_dict_dropped():
     from suite2p.parameters import default_settings
 
     _, s, notes = build({"registration": False})
-    assert s["registration"]["nonrigid"] == default_settings()["registration"]["nonrigid"]
+    assert (
+        s["registration"]["nonrigid"] == default_settings()["registration"]["nonrigid"]
+    )
     assert any("expected a dict" in n for n in notes)
 
 
 def test_flat_1x_names_accepted():
-    _, s, _ = build({"neuropil_coefficient": 0.5, "algorithm": "cellpose", "torch_device": "cuda"})
+    _, s, _ = build(
+        {"neuropil_coefficient": 0.5, "algorithm": "cellpose", "torch_device": "cuda"}
+    )
     assert s["extraction"]["neuropil_coefficient"] == 0.5
     assert s["detection"]["algorithm"] == "cellpose"
     assert s["torch_device"] == "cuda"
@@ -369,13 +416,17 @@ def test_removed_inputs_dropped_with_warning(params):
 
 
 def test_saved_db_output_keys_dropped_quietly():
-    db, _, notes = build({"first_files": [True, False], "Ly": 512, "nframes": 100, "iplane": 0})
+    db, _, notes = build(
+        {"first_files": [True, False], "Ly": 512, "nframes": 100, "iplane": 0}
+    )
     assert "first_files" not in db and "Ly" not in db
     assert not any("first_files" in n or "Ly" in n for n in notes)
 
 
 def test_long_values_truncated_in_notes():
-    _, _, notes = build({"file_list": [f"/very/long/path/file_{i:05d}.tif" for i in range(50)]})
+    _, _, notes = build(
+        {"file_list": [f"/very/long/path/file_{i:05d}.tif" for i in range(50)]}
+    )
     assert all(len(n) < 200 for n in notes)
 
 
@@ -393,11 +444,16 @@ def test_wrong_type_passed_through_with_warning():
 
 
 def test_numpy_values_become_native():
-    db, s, _ = build({
-        "nplanes": np.int64(2), "fs": np.float64(30.0), "nonrigid": np.bool_(False),
-        "block_size": np.array([64, 64]), "fast_disk": np.array([]),
-        "Neucoeff": np.array(0.6),
-    })
+    db, s, _ = build(
+        {
+            "nplanes": np.int64(2),
+            "fs": np.float64(30.0),
+            "nonrigid": np.bool_(False),
+            "block_size": np.array([64, 64]),
+            "fast_disk": np.array([]),
+            "Neucoeff": np.array(0.6),
+        }
+    )
     assert type(db["nplanes"]) is int and type(s["fs"]) is float
     assert s["registration"]["nonrigid"] is False
     assert s["registration"]["block_size"] == [64, 64]
@@ -406,17 +462,24 @@ def test_numpy_values_become_native():
 
 
 def test_to_native_nested():
-    assert to_native({"a": [np.int32(1), {"b": np.array([])}], "c": (np.float32(0.5),)}) == {
-        "a": [1, {"b": []}], "c": (0.5,)}
+    assert to_native(
+        {"a": [np.int32(1), {"b": np.array([])}], "c": (np.float32(0.5),)}
+    ) == {"a": [1, {"b": []}], "c": (0.5,)}
 
 
 # ---- pipeline-owned paths ----
 
 
 def test_pipeline_dictates_paths():
-    db, _, notes = build({"save_path0": "/elsewhere", "save_folder": "custom",
-                          "data_path": ["/x"], "look_one_level_down": True},
-                         save_path0="/proc/out")
+    db, _, notes = build(
+        {
+            "save_path0": "/elsewhere",
+            "save_folder": "custom",
+            "data_path": ["/x"],
+            "look_one_level_down": True,
+        },
+        save_path0="/proc/out",
+    )
     assert db["save_path0"] == "/proc/out"
     assert db["save_folder"] == "suite2p"
     assert db["data_path"] == ["/data"]
@@ -483,7 +546,11 @@ def test_torch_device_default_overridable():
 # ---- multi-ROI ----
 
 
-ROIS = {"lines": [list(range(0, 128)), list(range(144, 272))], "dy": [0, 0], "dx": [0, 128]}
+ROIS = {
+    "lines": [list(range(128)), list(range(144, 272))],
+    "dy": [0, 0],
+    "dx": [0, 128],
+}
 
 
 def test_mroi_passthrough():
@@ -560,7 +627,9 @@ def test_verify_outputs_setting_mismatch(tmp_path):
     used["registration"]["batch_size"] = 100
     _fake_run(tmp_path, db, used, ["plane0"])
     with pytest.raises(RuntimeError, match=r"batch_size.*requested 500.*used 100"):
-        verify_outputs(db, {**s, "registration": {**s["registration"], "batch_size": 500}})
+        verify_outputs(
+            db, {**s, "registration": {**s["registration"], "batch_size": 500}}
+        )
 
 
 # ---- dicts as fetched from ProcessingParamSet.params (DataJoint longblob) ----
@@ -580,9 +649,17 @@ def test_blob_with_numpy_values():
     """Blobs written from numpy (e.g. an ops/db.npy stored as-is) decode to arrays."""
     from datajoint.blob import pack, unpack
 
-    fetched = unpack(pack({"nplanes": np.int64(2), "block_size": np.array([64, 64]),
-                           "fast_disk": np.array([]), "Neucoeff": np.float32(0.5),
-                           "registration": {"nonrigid": np.bool_(False)}}))
+    fetched = unpack(
+        pack(
+            {
+                "nplanes": np.int64(2),
+                "block_size": np.array([64, 64]),
+                "fast_disk": np.array([]),
+                "Neucoeff": np.float32(0.5),
+                "registration": {"nonrigid": np.bool_(False)},
+            }
+        )
+    )
     db, s, _ = build(fetched)
     assert db["nplanes"] == 2 and type(db["nplanes"]) is int
     assert s["registration"]["block_size"] == [64, 64]

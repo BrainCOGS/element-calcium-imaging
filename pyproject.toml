@@ -11,6 +11,8 @@ license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "DataJoint", email = "info@datajoint.com" }]
 keywords = ["neuroscience", "calcium-imaging", "science", "datajoint"]
+# 3.11 for tomllib (used by the tests); BrainCOGS/U19-pipeline-python runs 3.13
+requires-python = ">=3.11"
 dependencies = [
     # datajoint 2 renamed dj.schema to dj.Schema (used at import in scan.py)
     "datajoint>=0.13.0,<2",
@@ -47,8 +49,125 @@ tests = ["pytest", "pytest-cov", "shutils"]
 Homepage = "https://github.com/datajoint/element-calcium-imaging"
 Repository = "https://github.com/BrainCOGS/element-calcium-imaging"
 
+[dependency-groups]
+dev = [
+    "packaging>=24",
+    "pytest>=9.1.1",
+    # The suite2p unit tests are skipped without it; torch/torchvision come from
+    # the CPU index below so the dev env and CI don't download the CUDA wheels.
+    "suite2p[io]>=1.1.0",
+    "torch",
+    "torchvision",
+]
+
+[tool.uv]
+# Supply-chain quarantine: ignore anything published in the last 7 days when
+# resolving. A compromised release is usually caught and yanked within days, so
+# waiting a week costs little and skips the window when a malicious version is
+# most likely to still be up. uv re-evaluates this relative value on every
+# resolution, so the window rolls forward on its own. "7 days" is the documented
+# friendly-duration form (ISO 8601 "P7D" is equivalent).
+#
+# Consequence to expect: immediately after an upstream release, `uv lock` will
+# decline to pick it up until it is a week old. That is the feature working. To
+# take a fresh release deliberately, run
+#   uv lock --exclude-newer <a timestamp after that upload>
+# or add a scoped exemption via `exclude-newer-package`.
+exclude-newer = "7 days"
+
+# `uv audit` is still gated behind a preview flag; declaring it here lets the CI
+# job run `uv audit` without `--preview-features audit-command`.
+preview-features = ["audit-command"]
+
+# Only used when developing this repo (uv ignores a dependency's sources), so
+# projects that install element-calcium-imaging keep their own torch choice.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
 [tool.setuptools.dynamic]
 version = { attr = "element_calcium_imaging.version.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["element_calcium_imaging*"]
+
+[tool.ruff]
+# Upstream formatted with black at 88 columns
+line-length = 88
+# notebooks are tutorials kept as upstream ships them
+extend-exclude = ["*.ipynb"]
+# apply the exclude to files pre-commit passes explicitly, too
+force-exclude = true
+
+[tool.ruff.lint]
+extend-select = [
+    "A",    # flake8-builtins: shadowing built-ins
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "T100", # leftover breakpoints / debugger calls
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "UP",   # pyupgrade
+    "C4",   # flake8-comprehensions
+]
+ignore = [
+    # reference ignores: mixedCase class attrs, arg shadows builtin, non-lowercase local var
+    "N815",
+    "A002",
+    "N806",
+    "B007",  # unused loop variable: the one hit (plotting/utilities.py) is upstream code
+    "B904",  # raise ... from: would change exception chaining in upstream code
+    "B905",  # zip(strict=): adding strict= changes behavior on length mismatch
+    "E731",  # lambda assignment: upstream style in the make() methods
+    # Ruff's default set (kept by extend-select) and the families above flag
+    # these in upstream code; fixing them is churn or would change behavior:
+    "C408",    # dict(...) calls: upstream builds DataJoint keys as dict(**key, ...)
+    "DTZ001",  # naive datetime: DataJoint datetime attributes are timezone-naive
+    "DTZ007",  # naive strptime: same as DTZ001
+    "E501",    # line length: ruff format wraps code; the rest is long strings/comments
+    "RUF012",  # mutable class default: DataJoint Lookup tables declare `contents = [...]`
+    "RUF013",  # implicit Optional in `activate(..., x: str = None)` signatures
+    "RUF059",  # unused unpacked variable: renaming upstream names is churn
+    "SIM102",  # collapsible if: upstream readability choice in make() methods
+    "TRY201",  # `raise err` -> `raise`: would change the reported traceback
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]  # re-exports
+# star import from .utilities is the module's public surface upstream
+"element_calcium_imaging/plotting/draw_rois.py" = ["F403", "F405", "C419"]
+# list comprehensions / dict iteration style in upstream plotting helpers
+"element_calcium_imaging/plotting/utilities.py" = ["C416", "PERF102"]
+# int(round(x)): x may be a numpy float, so keep the explicit int()
+"element_calcium_imaging/suite2p_settings.py" = ["RUF046"]
+# imported names are looked up by DataJoint's linking_module, so they are used
+"tests/tutorial_pipeline.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+addopts = [
+    "-ra",
+    "--showlocals",
+    "--strict-config",
+    "--strict-markers",
+    "--import-mode=importlib",
+]
+xfail_strict = true
+log_level = "INFO"
+testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    # datajoint <2 imports pkg_resources and uses old pyparsing names at import
+    "ignore:pkg_resources is deprecated as an API",
+    "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
+]

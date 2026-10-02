@@ -3,10 +3,9 @@ import inspect
 import pathlib
 import re
 from datetime import datetime
-from typing import Union
 
-import numpy as np
 import datajoint as dj
+import numpy as np
 from element_interface.utils import find_root_directory
 
 schema = dj.schema()
@@ -44,9 +43,9 @@ def activate(
 
     if isinstance(linking_module, str):
         linking_module = importlib.import_module(linking_module)
-    assert inspect.ismodule(
-        linking_module
-    ), "The argument 'dependency' must be a module's name or a module"
+    assert inspect.ismodule(linking_module), (
+        "The argument 'dependency' must be a module's name or a module"
+    )
 
     global _linking_module
     _linking_module = linking_module
@@ -85,7 +84,7 @@ def get_imaging_root_data_dir() -> list:
     return root_directories
 
 
-def get_processed_root_data_dir() -> Union[str, pathlib.Path]:
+def get_processed_root_data_dir() -> str | pathlib.Path:
     """Retrieve the root directory for all processed data.
 
     All data paths and directories in DataJoint Elements are recommended to be stored as
@@ -642,9 +641,9 @@ class ScanQualityMetrics(dj.Computed):
             nd2_dims = {k: i for i, k in enumerate(nd2_file.sizes)}
 
             valid_dimensions = "TZCYX"
-            assert set(nd2_dims) <= set(
-                valid_dimensions
-            ), f"Unknown dimensions {set(nd2_dims)-set(valid_dimensions)} in file {scan_filepaths[0]}."
+            assert set(nd2_dims) <= set(valid_dimensions), (
+                f"Unknown dimensions {set(nd2_dims) - set(valid_dimensions)} in file {scan_filepaths[0]}."
+            )
 
             # Sort the dimensions in the order of TZCYX, skipping the missing ones.
             data = nd2_file.asarray().transpose(

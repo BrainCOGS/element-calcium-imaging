@@ -1,22 +1,21 @@
-import yaml
 import datajoint as dj
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import yaml
 from dash import no_update
 from dash_extensions.enrich import (
     DashProxy,
     Input,
     Output,
-    State,
-    html,
-    dcc,
     Serverside,
     ServersideOutputTransform,
+    State,
+    dcc,
+    html,
 )
 
 from .utilities import *
-
 
 logger = dj.logger
 
@@ -215,12 +214,12 @@ def draw_rois(db_prefix: str):
                         scan, imaging, yaml.safe_load(value), x_mask_li, y_mask_li
                     )
                 else:
-                    logger.warn(
+                    logger.warning(
                         "Incorrect annotation list format. This is a known bug. Please draw a line anywhere on the image and click `Submit Curated Masks`. It will be ignored in the final submission but will format the list correctly."
                     )
                     return no_update
             else:
-                logger.warn("No annotations to submit.")
+                logger.warning("No annotations to submit.")
                 return no_update
         else:
             return no_update

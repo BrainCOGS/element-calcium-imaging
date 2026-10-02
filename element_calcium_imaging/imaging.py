@@ -51,9 +51,9 @@ def activate(
 
     if isinstance(linking_module, str):
         linking_module = importlib.import_module(linking_module)
-    assert inspect.ismodule(
-        linking_module
-    ), "The argument 'dependency' must be a module's name or a module"
+    assert inspect.ismodule(linking_module), (
+        "The argument 'dependency' must be a module's name or a module"
+    )
 
     global _linking_module
     _linking_module = linking_module
@@ -230,7 +230,7 @@ class ProcessingParamSet(dj.Lookup):
                 return
             else:  # If not same name: human error, trying to add the same paramset with different name
                 raise dj.DataJointError(
-                    "The specified param-set already exists - name: {}".format(p_name)
+                    f"The specified param-set already exists - name: {p_name}"
                 )
         else:
             cls.insert1(param_dict)
@@ -327,7 +327,7 @@ class ProcessingTask(dj.Manual):
         output_dir = (
             processed_dir
             / scan_dir.relative_to(root_dir)
-            / f'{method}_{key["paramset_idx"]}'
+            / f"{method}_{key['paramset_idx']}"
         )
 
         if mkdir:
@@ -373,9 +373,7 @@ class ProcessingTask(dj.Manual):
                 extract_loader.EXTRACT(output_dir)
 
             else:
-                raise NotImplementedError(
-                    "Unknown/unimplemented method: {}".format(method)
-                )
+                raise NotImplementedError(f"Unknown/unimplemented method: {method}")
         except FileNotFoundError:
             task_mode = "trigger"
         else:
@@ -465,7 +463,7 @@ class Processing(dj.Computed):
                     "To use EXTRACT with this DataJoint Element please set `task_mode=trigger`"
                 )
             else:
-                raise NotImplementedError("Unknown method: {}".format(method))
+                raise NotImplementedError(f"Unknown method: {method}")
         elif task_mode == "trigger":
             method = (ProcessingParamSet * ProcessingTask & key).fetch1(
                 "processing_method"
@@ -503,6 +501,7 @@ class Processing(dj.Computed):
                 if not isinstance(suite2p_params.get("classifier_path"), str):
                     suite2p_params["classifier_path"] = None
                 from suite2p.parameters import convert_settings_orig
+
                 s2p_db, s2p_settings, _ = convert_settings_orig(suite2p_params)
                 suite2p.run_s2p(db=s2p_db, settings=s2p_settings)  # Run suite2p
 
@@ -580,6 +579,7 @@ class Processing(dj.Computed):
                 if not isinstance(params["suite2p"].get("classifier_path"), str):
                     params["suite2p"]["classifier_path"] = None
                 from suite2p.parameters import convert_settings_orig
+
                 s2p_db, s2p_settings, _ = convert_settings_orig(params["suite2p"])
                 suite2p.run_s2p(db=s2p_db, settings=s2p_settings)
 
@@ -670,7 +670,7 @@ class Curation(dj.Manual):
             extract_dataset = imaging_dataset
             curation_time = extract_dataset.creation_time
         else:
-            raise NotImplementedError("Unknown method: {}".format(method))
+            raise NotImplementedError(f"Unknown method: {method}")
 
         # Synthesize curation_id
         curation_id = (
@@ -845,7 +845,9 @@ class MotionCorrection(dj.Imported):
                 # suite2p 1.x stores registration settings nested; 0.x stored them flat
                 reg_settings = ops.get("registration", {})
                 nonrigid_flag = reg_settings.get("nonrigid", ops.get("nonrigid", False))
-                block_size = reg_settings.get("block_size", ops.get("block_size", (128, 128)))
+                block_size = reg_settings.get(
+                    "block_size", ops.get("block_size", (128, 128))
+                )
                 # nblocks/xblock/yblock were removed from ops.npy in suite2p 1.x; reconstruct
                 if "nblocks" in ops:
                     nblocks = ops["nblocks"]
@@ -853,6 +855,7 @@ class MotionCorrection(dj.Imported):
                     yblock = ops["yblock"]
                 else:
                     from suite2p.registration.nonrigid import make_blocks
+
                     yblock, xblock, nblocks, *_ = make_blocks(
                         ops["Ly"], ops["Lx"], block_size=block_size
                     )
@@ -1179,7 +1182,7 @@ class MotionCorrection(dj.Imported):
             ]
             self.Summary.insert(summary_images)
         else:
-            raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+            raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
 
 # -------------- Segmentation --------------
@@ -1532,7 +1535,7 @@ class Fluorescence(dj.Computed):
             self.Trace.insert(fluo_traces)
 
         else:
-            raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+            raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
 
 @schema
@@ -1653,7 +1656,7 @@ class Activity(dj.Computed):
                     for mask in caiman_dataset.masks
                 )
         else:
-            raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+            raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
 
 @schema
@@ -1819,6 +1822,6 @@ def get_loader_result(key: dict, table: dj.Table) -> Callable:
 
         loaded_dataset = extract_loader.EXTRACT(output_path)
     else:
-        raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+        raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
     return method, loaded_dataset

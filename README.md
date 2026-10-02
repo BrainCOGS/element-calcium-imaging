@@ -1,17 +1,17 @@
 # DataJoint Element for Functional Calcium Imaging
 
-DataJoint Element for functional calcium imaging with 
-[ScanImage](https://docs.scanimage.org/), 
+DataJoint Element for functional calcium imaging with
+[ScanImage](https://docs.scanimage.org/),
 [Scanbox](https://scanbox.org/),
-[Nikon NIS-Elements](https://www.microscope.healthcare.nikon.com/products/software/nis-elements), 
-and `Bruker Prairie View` acquisition software; and 
-[Suite2p](https://github.com/MouseLand/suite2p), 
+[Nikon NIS-Elements](https://www.microscope.healthcare.nikon.com/products/software/nis-elements),
+and `Bruker Prairie View` acquisition software; and
+[Suite2p](https://github.com/MouseLand/suite2p),
 [CaImAn](https://github.com/flatironinstitute/CaImAn), and
-[EXTRACT](https://github.com/schnitzer-lab/EXTRACT-public) analysis 
+[EXTRACT](https://github.com/schnitzer-lab/EXTRACT-public) analysis
 software. DataJoint Elements collectively standardize and automate
 data collection and analysis for neuroscience experiments. Each Element is a modular
 pipeline for data storage and processing with corresponding database tables that can be
-combined with other Elements to assemble a fully functional pipeline. This repository 
+combined with other Elements to assemble a fully functional pipeline. This repository
 also provides a tutorial environment and notebooks to learn the pipeline.
 
 > **BrainCOGS fork:** CaImAn processing is currently disabled; CaImAn tasks raise
@@ -26,10 +26,10 @@ also provides a tutorial environment and notebooks to learn the pipeline.
 
 ![pipeline](https://raw.githubusercontent.com/datajoint/element-calcium-imaging/main/images/pipeline_imaging.svg)
 
-+ We have designed three variations of the pipeline to handle different use cases. 
-Displayed above is the default `imaging` schema.  Details on all of the `imaging` 
-schemas can be found in the [Data 
-Pipeline](https://datajoint.com/docs/elements/element-calcium-imaging/latest/pipeline/) 
++ We have designed three variations of the pipeline to handle different use cases.
+Displayed above is the default `imaging` schema.  Details on all of the `imaging`
+schemas can be found in the [Data
+Pipeline](https://datajoint.com/docs/elements/element-calcium-imaging/latest/pipeline/)
 documentation page.
 
 ## Getting Started
@@ -52,9 +52,22 @@ documentation page.
 
 + [Documentation](https://datajoint.com/docs/elements/element-calcium-imaging)
 
+## Development
+
+The dev environment comes from `uv.lock` (suite2p and CPU-only torch included, so
+the whole unit suite runs):
+
+```bash
+uv sync                 # create .venv with the dev dependency group
+uv tool install prek    # pre-commit compatible hook runner
+prek install            # run the hooks on every commit
+prek run --all-files    # run them once over the repo
+uv run pytest           # DB integration tests skip without a database
+```
+
 ## Support
 
-+ If you need help getting started or run into any errors, please open a GitHub Issue 
++ If you need help getting started or run into any errors, please open a GitHub Issue
 or contact our team by email at support@datajoint.com.
 
 ## Interactive Tutorial
