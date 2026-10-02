@@ -726,7 +726,7 @@ class Processing(dj.Computed):
 
             if method == "suite2p":
                 print("before loading suite2p")
-                import suite2p  # noqa: F401  (fail early if suite2p is missing)
+                import suite2p  # fail early if suite2p is missing
 
                 suite2p_params = (ProcessingTask * ProcessingParamSet & key).fetch1(
                     "params"

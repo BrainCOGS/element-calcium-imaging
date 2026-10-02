@@ -39,7 +39,7 @@ def pipeline():
         pytest.skip("no DataJoint database configured (set DJ_HOST/DJ_USER/DJ_PASS)")
     try:
         dj.conn()
-    except Exception as err:
+    except Exception as err:  # noqa: BLE001  (any connection failure means skip)
         pytest.skip(f"DataJoint database not reachable: {type(err).__name__}")
 
     from . import tutorial_pipeline as pipeline

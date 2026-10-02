@@ -105,18 +105,48 @@ extend-exclude = ["*.ipynb"]
 force-exclude = true
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+extend-select = [
+    "A",    # flake8-builtins: shadowing built-ins
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "T100", # leftover breakpoints / debugger calls
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "UP",   # pyupgrade
+    "C4",   # flake8-comprehensions
+]
 ignore = [
+    # reference ignores: mixedCase class attrs, arg shadows builtin, non-lowercase local var
+    "N815",
+    "A002",
+    "N806",
     "B007",  # unused loop variable: the one hit (plotting/utilities.py) is upstream code
     "B904",  # raise ... from: would change exception chaining in upstream code
     "B905",  # zip(strict=): adding strict= changes behavior on length mismatch
     "E731",  # lambda assignment: upstream style in the make() methods
+    # Ruff's default set (kept by extend-select) and the families above flag
+    # these in upstream code; fixing them is churn or would change behavior:
+    "C408",    # dict(...) calls: upstream builds DataJoint keys as dict(**key, ...)
+    "DTZ001",  # naive datetime: DataJoint datetime attributes are timezone-naive
+    "DTZ007",  # naive strptime: same as DTZ001
+    "E501",    # line length: ruff format wraps code; the rest is long strings/comments
+    "RUF012",  # mutable class default: DataJoint Lookup tables declare `contents = [...]`
+    "RUF013",  # implicit Optional in `activate(..., x: str = None)` signatures
+    "RUF059",  # unused unpacked variable: renaming upstream names is churn
+    "SIM102",  # collapsible if: upstream readability choice in make() methods
+    "TRY201",  # `raise err` -> `raise`: would change the reported traceback
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401"]  # re-exports
 # star import from .utilities is the module's public surface upstream
-"element_calcium_imaging/plotting/draw_rois.py" = ["F403", "F405"]
+"element_calcium_imaging/plotting/draw_rois.py" = ["F403", "F405", "C419"]
+# list comprehensions / dict iteration style in upstream plotting helpers
+"element_calcium_imaging/plotting/utilities.py" = ["C416", "PERF102"]
+# int(round(x)): x may be a numpy float, so keep the explicit int()
+"element_calcium_imaging/suite2p_settings.py" = ["RUF046"]
 # imported names are looked up by DataJoint's linking_module, so they are used
 "tests/tutorial_pipeline.py" = ["F401"]
 
