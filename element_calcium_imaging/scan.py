@@ -3,10 +3,9 @@ import inspect
 import pathlib
 import re
 from datetime import datetime
-from typing import Union
 
-import numpy as np
 import datajoint as dj
+import numpy as np
 from element_interface.utils import find_root_directory
 
 schema = dj.schema()
@@ -85,7 +84,7 @@ def get_imaging_root_data_dir() -> list:
     return root_directories
 
 
-def get_processed_root_data_dir() -> Union[str, pathlib.Path]:
+def get_processed_root_data_dir() -> str | pathlib.Path:
     """Retrieve the root directory for all processed data.
 
     All data paths and directories in DataJoint Elements are recommended to be stored as

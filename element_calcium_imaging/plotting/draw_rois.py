@@ -1,22 +1,21 @@
-import yaml
 import datajoint as dj
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import yaml
 from dash import no_update
 from dash_extensions.enrich import (
     DashProxy,
     Input,
     Output,
-    State,
-    html,
-    dcc,
     Serverside,
     ServersideOutputTransform,
+    State,
+    dcc,
+    html,
 )
 
 from .utilities import *
-
 
 logger = dj.logger
 

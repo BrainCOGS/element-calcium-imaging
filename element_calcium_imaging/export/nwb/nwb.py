@@ -1,5 +1,5 @@
-import numpy as np
 import datajoint as dj
+import numpy as np
 from datajoint import DataJointError
 from pynwb import NWBHDF5IO, NWBFile
 from pynwb.ophys import (
@@ -10,9 +10,8 @@ from pynwb.ophys import (
     TwoPhotonSeries,
 )
 
-from ... import scan, imaging_no_curation
-from ...scan import get_calcium_imaging_files, get_imaging_root_data_dir
-
+from ... import imaging_no_curation, scan
+from ...scan import get_calcium_imaging_files
 
 logger = dj.logger
 

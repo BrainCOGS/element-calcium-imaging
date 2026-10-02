@@ -1,5 +1,3 @@
-from typing import Tuple
-
 import numpy as np
 import plotly.graph_objects as go
 from matplotlib import colors
@@ -100,7 +98,7 @@ def get_tracelayout(key, width=600, height=600) -> dict:
     )
 
 
-def figure_data(imaging, segmentation_key) -> Tuple[np.array, np.array]:
+def figure_data(imaging, segmentation_key) -> tuple[np.array, np.array]:
     """Prepare the images for a given segmentation_key.
 
     Args:

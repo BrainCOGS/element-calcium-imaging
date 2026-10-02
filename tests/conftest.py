@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
+
 import datajoint as dj
 import pytest
-
 
 logger = dj.logger
 _tear_down = True

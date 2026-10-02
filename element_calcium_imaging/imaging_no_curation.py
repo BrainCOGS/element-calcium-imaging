@@ -230,7 +230,7 @@ class ProcessingParamSet(dj.Lookup):
                 return
             else:  # If not same name: human error, trying to add the same paramset with different name
                 raise dj.DataJointError(
-                    "The specified param-set already exists - name: {}".format(p_name)
+                    f"The specified param-set already exists - name: {p_name}"
                 )
         else:
             cls.insert1(param_dict)
@@ -373,9 +373,7 @@ class ProcessingTask(dj.Manual):
                 extract_loader.EXTRACT(output_dir)
 
             else:
-                raise NotImplementedError(
-                    "Unknown/unimplemented method: {}".format(method)
-                )
+                raise NotImplementedError(f"Unknown/unimplemented method: {method}")
         except FileNotFoundError:
             task_mode = "trigger"
         else:
@@ -466,7 +464,7 @@ class Processing(dj.Computed):
                     "To use EXTRACT with this DataJoint Element please set `task_mode=trigger`"
                 )
             else:
-                raise NotImplementedError("Unknown method: {}".format(method))
+                raise NotImplementedError(f"Unknown method: {method}")
         elif task_mode == "trigger":
             method = (ProcessingParamSet * ProcessingTask & key).fetch1(
                 "processing_method"
@@ -1112,7 +1110,7 @@ class MotionCorrection(dj.Imported):
             ]
             self.Summary.insert(summary_images)
         else:
-            raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+            raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
 
 # -------------- Segmentation --------------
@@ -1465,7 +1463,7 @@ class Fluorescence(dj.Computed):
             self.Trace.insert(fluo_traces)
 
         else:
-            raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+            raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
 
 @schema
@@ -1586,7 +1584,7 @@ class Activity(dj.Computed):
                     for mask in caiman_dataset.masks
                 )
         else:
-            raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+            raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
 
 @schema
@@ -1752,6 +1750,6 @@ def get_loader_result(key: dict, table: dj.Table) -> Callable:
 
         loaded_dataset = extract_loader.EXTRACT(output_path)
     else:
-        raise NotImplementedError("Unknown/unimplemented method: {}".format(method))
+        raise NotImplementedError(f"Unknown/unimplemented method: {method}")
 
     return method, loaded_dataset
