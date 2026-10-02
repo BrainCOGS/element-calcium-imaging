@@ -40,7 +40,9 @@ def fake_s2p(monkeypatch):
 
 
 def run(tmp_path, params=None, **kw):
-    kw.setdefault("image_files", [tmp_path / "raw" / "a.tif", tmp_path / "raw" / "b.tif"])
+    kw.setdefault(
+        "image_files", [tmp_path / "raw" / "a.tif", tmp_path / "raw" / "b.tif"]
+    )
     kw.setdefault("output_dir", tmp_path / "out")
     kw.setdefault("scan_info", SCAN_INFO)
     return run_suite2p({} if params is None else params, **kw)
@@ -51,8 +53,10 @@ def run(tmp_path, params=None, **kw):
 
 def test_runs_with_pipeline_inputs(tmp_path, fake_s2p):
     db, settings = run(tmp_path)
-    (called_db, called_settings), = fake_s2p
-    assert called_db["file_list"] == [(tmp_path / "raw" / f).as_posix() for f in ("a.tif", "b.tif")]
+    ((called_db, called_settings),) = fake_s2p
+    assert called_db["file_list"] == [
+        (tmp_path / "raw" / f).as_posix() for f in ("a.tif", "b.tif")
+    ]
     assert called_db["data_path"] == [(tmp_path / "raw").as_posix()]
     assert called_db["save_path0"] == (tmp_path / "out").as_posix()
     assert called_db["input_format"] == "tif"
@@ -62,8 +66,12 @@ def test_runs_with_pipeline_inputs(tmp_path, fake_s2p):
 
 
 def test_accepts_str_paths(tmp_path, fake_s2p):
-    run(tmp_path, image_files=[str(tmp_path / "a.TIF")], output_dir=str(tmp_path / "out"))
-    (db, _), = fake_s2p
+    run(
+        tmp_path,
+        image_files=[str(tmp_path / "a.TIF")],
+        output_dir=str(tmp_path / "out"),
+    )
+    ((db, _),) = fake_s2p
     assert db["input_format"] == "tif"
 
 
@@ -75,7 +83,7 @@ def test_no_image_files(tmp_path, fake_s2p):
 
 def test_scan_info_optional(tmp_path, fake_s2p):
     run(tmp_path, params={"nplanes": 1, "fs": 15.0}, scan_info=None)
-    (db, settings), = fake_s2p
+    ((db, settings),) = fake_s2p
     assert db["nplanes"] == 1 and settings["fs"] == 15.0
 
 
@@ -112,7 +120,9 @@ def test_device_defaults_to_stored_then_cpu(tmp_path, fake_s2p):
 
 def test_explicit_device_overrides_stored(tmp_path, fake_s2p, monkeypatch):
     checked = []
-    monkeypatch.setattr(suite2p_settings, "check_torch_device", lambda d: checked.append(d))
+    monkeypatch.setattr(
+        suite2p_settings, "check_torch_device", lambda d: checked.append(d)
+    )
     _, settings = run(tmp_path, params={"torch_device": "cpu"}, torch_device="cuda")
     assert settings["torch_device"] == "cuda"
     assert fake_s2p[0][1]["torch_device"] == "cuda"
@@ -121,7 +131,9 @@ def test_explicit_device_overrides_stored(tmp_path, fake_s2p, monkeypatch):
 
 def test_stored_device_is_checked(tmp_path, fake_s2p, monkeypatch):
     checked = []
-    monkeypatch.setattr(suite2p_settings, "check_torch_device", lambda d: checked.append(d))
+    monkeypatch.setattr(
+        suite2p_settings, "check_torch_device", lambda d: checked.append(d)
+    )
     run(tmp_path, params={"torch_device": "cuda"})
     assert checked == ["cuda"]
 
@@ -164,7 +176,9 @@ def test_check_cuda_kernel_failure(monkeypatch):
     monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
 
     def no_kernel(*a, **k):
-        raise RuntimeError("CUDA error: no kernel image is available for execution on the device")
+        raise RuntimeError(
+            "CUDA error: no kernel image is available for execution on the device"
+        )
 
     monkeypatch.setattr(torch, "ones", no_kernel)
     with pytest.raises(RuntimeError, match="cannot run on cuda.*no kernel image"):

@@ -51,9 +51,9 @@ def activate(
 
     if isinstance(linking_module, str):
         linking_module = importlib.import_module(linking_module)
-    assert inspect.ismodule(
-        linking_module
-    ), "The argument 'dependency' must be a module's name or a module"
+    assert inspect.ismodule(linking_module), (
+        "The argument 'dependency' must be a module's name or a module"
+    )
 
     global _linking_module
     _linking_module = linking_module
@@ -109,7 +109,9 @@ def _run_suite2p(params: dict, key: dict, image_files: list, output_dir) -> None
 
     if not image_files:
         raise FileNotFoundError(f"No input image files for suite2p processing of {key}")
-    fps, ndepths, nchannels = (scan.ScanInfo & key).fetch1("fps", "ndepths", "nchannels")
+    fps, ndepths, nchannels = (scan.ScanInfo & key).fetch1(
+        "fps", "ndepths", "nchannels"
+    )
     suite2p_settings.run_suite2p(
         params,
         image_files=image_files,
@@ -533,7 +535,7 @@ class ProcessingTask(dj.Manual):
         output_dir = (
             processed_dir
             / scan_dir.relative_to(root_dir)
-            / f'{method}_{key["paramset_idx"]}'
+            / f"{method}_{key['paramset_idx']}"
         )
 
         if mkdir:
@@ -629,7 +631,7 @@ class Processing(dj.Computed):
 
     def make(self, key):
 
-        print('here key ***********************************')
+        print("here key ***********************************")
         print(key)
 
         """Execute the calcium imaging analysis defined by the ProcessingTask."""
@@ -639,11 +641,10 @@ class Processing(dj.Computed):
         )
         package_version = ""
 
-
-        print('task_mode ***********************************')
+        print("task_mode ***********************************")
         print(task_mode)
 
-        print('output_dir ***********************************')
+        print("output_dir ***********************************")
         print(output_dir)
 
         if not output_dir:
@@ -665,7 +666,7 @@ class Processing(dj.Computed):
             else:
                 raise e
 
-        print('output_dir 2 ***********************************')
+        print("output_dir 2 ***********************************")
         print(output_dir)
 
         if task_mode == "load":
@@ -690,7 +691,7 @@ class Processing(dj.Computed):
                 "processing_method"
             )
 
-            print('method')
+            print("method")
             print(method)
 
             preprocess_paramsets = (
@@ -698,7 +699,7 @@ class Processing(dj.Computed):
                 & dict(preprocess_param_steps_id=key["preprocess_param_steps_id"])
             ).fetch("paramset_idx")
 
-            print('preprocess_paramsets')
+            print("preprocess_paramsets")
             print(preprocess_paramsets)
 
             if len(preprocess_paramsets) == 0:
@@ -708,7 +709,6 @@ class Processing(dj.Computed):
                     find_full_path(get_imaging_root_data_dir(), image_file)
                     for image_file in image_files
                 ]
-
 
             else:
                 preprocess_output_dir = (PreprocessTask & key).fetch1(
@@ -726,17 +726,15 @@ class Processing(dj.Computed):
 
                 image_files = list(preprocess_output_dir.glob("*.tif"))
 
-
             if method == "suite2p":
-
-                print('before loading suite2p')
+                print("before loading suite2p")
                 import suite2p
 
                 suite2p_params = (ProcessingTask * ProcessingParamSet & key).fetch1(
                     "params"
                 )
 
-                print('here suite2p params')
+                print("here suite2p params")
                 print(suite2p_params)
 
                 _run_suite2p(suite2p_params, key, image_files, output_dir)
@@ -1070,7 +1068,9 @@ class MotionCorrection(dj.Imported):
                 # suite2p 1.x stores registration settings nested; 0.x stored them flat
                 reg_settings = ops.get("registration", {})
                 nonrigid_flag = reg_settings.get("nonrigid", ops.get("nonrigid", False))
-                block_size = reg_settings.get("block_size", ops.get("block_size", (128, 128)))
+                block_size = reg_settings.get(
+                    "block_size", ops.get("block_size", (128, 128))
+                )
                 # nblocks/xblock/yblock were removed from ops.npy in suite2p 1.x; reconstruct
                 if "nblocks" in ops:
                     nblocks = ops["nblocks"]
@@ -1078,6 +1078,7 @@ class MotionCorrection(dj.Imported):
                     yblock = ops["yblock"]
                 else:
                     from suite2p.registration.nonrigid import make_blocks
+
                     yblock, xblock, nblocks, *_ = make_blocks(
                         ops["Ly"], ops["Lx"], block_size=block_size
                     )

@@ -181,8 +181,8 @@ def _add_scan_to_nwb(session_key, nwbfile):
 
     for channel in range(no_channels):
         optical_channel = OpticalChannel(
-            name=f"OpticalChannel{channel+1}",
-            description=f"Optical channel number {channel+1}",
+            name=f"OpticalChannel{channel + 1}",
+            description=f"Optical channel number {channel + 1}",
             emission_lambda=nan,
         )
 
@@ -195,7 +195,7 @@ def _add_scan_to_nwb(session_key, nwbfile):
                 description=(
                     scan_notes
                     if scan_notes != ""
-                    else f"Imaging plane for field {field_no+1}, channel {channel+1}"
+                    else f"Imaging plane for field {field_no + 1}, channel {channel + 1}"
                 ),
                 device=device,
                 excitation_lambda=nan,

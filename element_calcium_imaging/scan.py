@@ -44,9 +44,9 @@ def activate(
 
     if isinstance(linking_module, str):
         linking_module = importlib.import_module(linking_module)
-    assert inspect.ismodule(
-        linking_module
-    ), "The argument 'dependency' must be a module's name or a module"
+    assert inspect.ismodule(linking_module), (
+        "The argument 'dependency' must be a module's name or a module"
+    )
 
     global _linking_module
     _linking_module = linking_module
@@ -642,9 +642,9 @@ class ScanQualityMetrics(dj.Computed):
             nd2_dims = {k: i for i, k in enumerate(nd2_file.sizes)}
 
             valid_dimensions = "TZCYX"
-            assert set(nd2_dims) <= set(
-                valid_dimensions
-            ), f"Unknown dimensions {set(nd2_dims)-set(valid_dimensions)} in file {scan_filepaths[0]}."
+            assert set(nd2_dims) <= set(valid_dimensions), (
+                f"Unknown dimensions {set(nd2_dims) - set(valid_dimensions)} in file {scan_filepaths[0]}."
+            )
 
             # Sort the dimensions in the order of TZCYX, skipping the missing ones.
             data = nd2_file.asarray().transpose(

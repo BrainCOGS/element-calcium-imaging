@@ -51,9 +51,9 @@ def activate(
 
     if isinstance(linking_module, str):
         linking_module = importlib.import_module(linking_module)
-    assert inspect.ismodule(
-        linking_module
-    ), "The argument 'dependency' must be a module's name or a module"
+    assert inspect.ismodule(linking_module), (
+        "The argument 'dependency' must be a module's name or a module"
+    )
 
     global _linking_module
     _linking_module = linking_module
@@ -327,7 +327,7 @@ class ProcessingTask(dj.Manual):
         output_dir = (
             processed_dir
             / scan_dir.relative_to(root_dir)
-            / f'{method}_{key["paramset_idx"]}'
+            / f"{method}_{key['paramset_idx']}"
         )
 
         if mkdir:
@@ -504,6 +504,7 @@ class Processing(dj.Computed):
                 if not isinstance(suite2p_params.get("classifier_path"), str):
                     suite2p_params["classifier_path"] = None
                 from suite2p.parameters import convert_settings_orig
+
                 s2p_db, s2p_settings, _ = convert_settings_orig(suite2p_params)
                 suite2p.run_s2p(db=s2p_db, settings=s2p_settings)  # Run suite2p
 
@@ -581,6 +582,7 @@ class Processing(dj.Computed):
                 if not isinstance(params["suite2p"].get("classifier_path"), str):
                     params["suite2p"]["classifier_path"] = None
                 from suite2p.parameters import convert_settings_orig
+
                 s2p_db, s2p_settings, _ = convert_settings_orig(params["suite2p"])
                 suite2p.run_s2p(db=s2p_db, settings=s2p_settings)
 
@@ -773,7 +775,9 @@ class MotionCorrection(dj.Imported):
                 # suite2p 1.x stores registration settings nested; 0.x stored them flat
                 reg_settings = ops.get("registration", {})
                 nonrigid_flag = reg_settings.get("nonrigid", ops.get("nonrigid", False))
-                block_size = reg_settings.get("block_size", ops.get("block_size", (128, 128)))
+                block_size = reg_settings.get(
+                    "block_size", ops.get("block_size", (128, 128))
+                )
                 # nblocks/xblock/yblock were removed from ops.npy in suite2p 1.x; reconstruct
                 if "nblocks" in ops:
                     nblocks = ops["nblocks"]
@@ -781,6 +785,7 @@ class MotionCorrection(dj.Imported):
                     yblock = ops["yblock"]
                 else:
                     from suite2p.registration.nonrigid import make_blocks
+
                     yblock, xblock, nblocks, *_ = make_blocks(
                         ops["Ly"], ops["Lx"], block_size=block_size
                     )
