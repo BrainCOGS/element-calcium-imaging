@@ -4,9 +4,10 @@ https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
 https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings
 """
 
-import mkdocs_gen_files
-from pathlib import Path
 import os
+from pathlib import Path
+
+import mkdocs_gen_files
 
 package = os.getenv("PACKAGE")
 

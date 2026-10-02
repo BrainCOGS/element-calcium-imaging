@@ -62,9 +62,9 @@ BrainCOGS fork release: suite2p 1.1.0 support, `pyproject.toml` packaging, CaImA
 
 ## [0.10.1] - 2024-06-20
 
-+ Fix - cleaner plotting in tutorial notebook 
++ Fix - cleaner plotting in tutorial notebook
 + Update - markdown typos and add links in tutorial notebook
-+ Update - from `dj.Schema()` to `dj.schema()` to increase consistency with other Elements 
++ Update - from `dj.Schema()` to `dj.schema()` to increase consistency with other Elements
 
 ## [0.10.0] - 2024-04-09
 

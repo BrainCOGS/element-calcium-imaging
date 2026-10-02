@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
+
 import datajoint as dj
 import pytest
-
 
 logger = dj.logger
 _tear_down = True
@@ -25,11 +25,22 @@ def dj_config():
         }
     )
     os.environ["DATABASE_PREFIX"] = "test_"
-    return
 
 
 @pytest.fixture(autouse=True, scope="session")
 def pipeline():
+    # These integration tests need the element-* packages (the `elements` extra),
+    # a reachable DataJoint database and the example dataset. Skip, rather than
+    # error, when they're not there (e.g. in CI).
+    for module in ("element_animal", "element_lab", "element_session"):
+        pytest.importorskip(module)
+    if not dj.config["database.user"]:
+        pytest.skip("no DataJoint database configured (set DJ_HOST/DJ_USER/DJ_PASS)")
+    try:
+        dj.conn()
+    except Exception as err:  # noqa: BLE001  (any connection failure means skip)
+        pytest.skip(f"DataJoint database not reachable: {type(err).__name__}")
+
     from . import tutorial_pipeline as pipeline
 
     yield {

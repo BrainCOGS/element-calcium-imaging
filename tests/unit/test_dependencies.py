@@ -70,7 +70,9 @@ def test_nwb_export_imports_are_in_nwb_extra(project):
 
 def test_datajoint_below_2(project):
     """datajoint 2 renamed dj.schema to dj.Schema; scan.py fails at import on 2.x."""
-    (req,) = [Requirement(r) for r in project["dependencies"] if r.startswith("datajoint")]
+    (req,) = [
+        Requirement(r) for r in project["dependencies"] if r.startswith("datajoint")
+    ]
     assert "2.0.0" not in req.specifier
     assert not SpecifierSet(str(req.specifier)).contains("2.3.3")
     assert req.specifier.contains("0.14.9")  # what U19 runs today
