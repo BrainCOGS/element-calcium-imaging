@@ -1636,7 +1636,7 @@ provides-extras = ["elements", "extract", "nd2", "nwb", "sbxreader", "scanreader
 [package.metadata.requires-dev]
 dev = [
     { name = "packaging", specifier = ">=24" },
-    { name = "pytest", specifier = ">=8" },
+    { name = "pytest", specifier = ">=9.1.1" },
     { name = "suite2p", extras = ["io"], specifier = ">=1.1.0" },
     { name = "torch", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchvision", index = "https://download.pytorch.org/whl/cpu" },

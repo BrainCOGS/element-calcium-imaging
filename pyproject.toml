@@ -52,7 +52,7 @@ Repository = "https://github.com/BrainCOGS/element-calcium-imaging"
 [dependency-groups]
 dev = [
     "packaging>=24",
-    "pytest>=8",
+    "pytest>=9.1.1",
     # The suite2p unit tests are skipped without it; torch/torchvision come from
     # the CPU index below so the dev env and CI don't download the CUDA wheels.
     "suite2p[io]>=1.1.0",
@@ -154,4 +154,20 @@ ignore = [
 combine-as-imports = true
 
 [tool.pytest.ini_options]
+minversion = "9.0"
+addopts = [
+    "-ra",
+    "--showlocals",
+    "--strict-config",
+    "--strict-markers",
+    "--import-mode=importlib",
+]
+xfail_strict = true
+log_level = "INFO"
 testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    # datajoint <2 imports pkg_resources and uses old pyparsing names at import
+    "ignore:pkg_resources is deprecated as an API",
+    "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
+]
