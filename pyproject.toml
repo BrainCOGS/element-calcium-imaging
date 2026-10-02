@@ -95,3 +95,30 @@ version = { attr = "element_calcium_imaging.version.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["element_calcium_imaging*"]
+
+[tool.ruff]
+# Upstream formatted with black at 88 columns
+line-length = 88
+# notebooks are tutorials kept as upstream ships them
+extend-exclude = ["*.ipynb"]
+# apply the exclude to files pre-commit passes explicitly, too
+force-exclude = true
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+ignore = [
+    "B007",  # unused loop variable: the one hit (plotting/utilities.py) is upstream code
+    "B904",  # raise ... from: would change exception chaining in upstream code
+    "B905",  # zip(strict=): adding strict= changes behavior on length mismatch
+    "E731",  # lambda assignment: upstream style in the make() methods
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]  # re-exports
+# star import from .utilities is the module's public surface upstream
+"element_calcium_imaging/plotting/draw_rois.py" = ["F403", "F405"]
+# imported names are looked up by DataJoint's linking_module, so they are used
+"tests/tutorial_pipeline.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
