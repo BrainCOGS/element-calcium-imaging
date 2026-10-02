@@ -664,7 +664,7 @@ class Processing(dj.Computed):
                 output_dir.mkdir(parents=True, exist_ok=True)
             else:
                 raise e
-            
+
         print('output_dir 2 ***********************************')
         print(output_dir)
 
