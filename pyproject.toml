@@ -14,8 +14,9 @@ keywords = ["neuroscience", "calcium-imaging", "science", "datajoint"]
 # 3.11 for tomllib (used by the tests); BrainCOGS/U19-pipeline-python runs 3.13
 requires-python = ">=3.11"
 dependencies = [
-    # datajoint 2 renamed dj.schema to dj.Schema (used at import in scan.py)
-    "datajoint>=0.13.0,<2",
+    # datajoint 2 renamed dj.schema to dj.Schema (used at import in scan.py).
+    # 0.14.10 is the first 0.14 release without pkg_resources; pin it exactly.
+    "datajoint==0.14.10",
     "ipykernel>=6.0.1",
     "ipywidgets",
     "plotly",
@@ -167,7 +168,6 @@ log_level = "INFO"
 testpaths = ["tests"]
 filterwarnings = [
     "error",
-    # datajoint <2 imports pkg_resources and uses old pyparsing names at import
-    "ignore:pkg_resources is deprecated as an API",
+    # datajoint 0.14 uses old pyparsing names at import
     "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
 ]
