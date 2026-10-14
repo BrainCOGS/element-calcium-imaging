@@ -14,6 +14,8 @@ Observes [Semantic Versioning](https://semver.org/spec/v2.0.0.html) standard and
   once instead of partway through a run
 + Fix - `Processing` with `task_mode="load"` accepts ScanImage multi-ROI suite2p output,
   as `task_mode="trigger"` already did
++ Update - require exactly `datajoint==0.14.10`, the first 0.14 release that no longer
+  imports `pkg_resources` or depends on `otumat`, so setuptools 82+ works
 
 ## [0.10.3] - 2026-09-30
 

@@ -7,7 +7,6 @@ import tomllib
 
 import pytest
 from packaging.requirements import Requirement
-from packaging.specifiers import SpecifierSet
 
 ROOT = pathlib.Path(__file__).parents[2]
 PACKAGE = ROOT / "element_calcium_imaging"
@@ -68,11 +67,11 @@ def test_nwb_export_imports_are_in_nwb_extra(project):
     assert not missing, f"NWB export imports not declared: {sorted(missing)}"
 
 
-def test_datajoint_below_2(project):
-    """datajoint 2 renamed dj.schema to dj.Schema; scan.py fails at import on 2.x."""
+def test_datajoint_pinned_to_0_14_10(project):
+    """datajoint 2 renamed dj.schema to dj.Schema; 0.14.9 and older need pkg_resources."""
     (req,) = [
         Requirement(r) for r in project["dependencies"] if r.startswith("datajoint")
     ]
-    assert "2.0.0" not in req.specifier
-    assert not SpecifierSet(str(req.specifier)).contains("2.3.3")
-    assert req.specifier.contains("0.14.9")  # what U19 runs today
+    assert req.specifier.contains("0.14.10")
+    for version in ("0.14.9", "0.14.11", "2.0.0"):
+        assert not req.specifier.contains(version)
