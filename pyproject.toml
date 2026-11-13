@@ -79,7 +79,9 @@ exclude-newer = "7 days"
 # intermediate keys were compromised (PYSEC-2026-4320), which fails `uv audit`.
 # Taken before the week is up; drop the entry once that release is older than
 # the window.
-exclude-newer-package = { certifi = "2026-10-21T00:00:00Z" }
+# Security fix: tornado 6.6.1 (GHSA-5cjw-f85j-cv6r).
+# Dated package cutoffs admit these fixes without relaxing the global cooldown.
+exclude-newer-package = { certifi = "2026-10-21T00:00:00Z", tornado = "2026-11-10T00:00:00Z" }
 
 # `uv audit` is still gated behind a preview flag; declaring it here lets the CI
 # job run `uv audit` without `--preview-features audit-command`.
@@ -176,3 +178,8 @@ filterwarnings = [
     # datajoint 0.14 uses old pyparsing names at import
     "ignore::pyparsing.warnings.PyparsingDeprecationWarning",
 ]
+
+[tool.uv.extra-build-variables]
+# numcodecs 0.15.1 bundles C-Blosc with a bool typedef rejected by C23 compilers.
+# Python 3.14 needs a source build; keep this workaround scoped to that package.
+numcodecs = { CFLAGS = "-std=gnu11" }
